@@ -31,6 +31,10 @@ h2 { /* Header 2 */
 }
 </style>
 
+```{r setup, echo=FALSE, include=FALSE}
+knitr::opts_chunk$set(eval = TRUE, warning=FALSE, message = FALSE)
+htmltools::includeHTML("AdSense.html")
+```
 
 # Time Series Data and Time Series Model
 

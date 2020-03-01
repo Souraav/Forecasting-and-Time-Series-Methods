@@ -4,7 +4,6 @@ This is a course in the analysis of time series data with emphasis on appropriat
 
 Contributors:  
 Dr. Yichen Qin, Associate Professor of Business Analytics at University of Cincinnati
-
 Dr. Martin Levy, Professor of Business Analytics at University of Cincinnati
 
 # Lecture

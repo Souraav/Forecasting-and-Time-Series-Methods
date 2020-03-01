@@ -15,10 +15,14 @@ output:
 editor_options: 
   chunk_output_type: console
 ---
+```{r setup, echo=FALSE, include=FALSE}
+knitr::opts_chunk$set(eval = TRUE, warning=FALSE, message = FALSE)
+htmltools::includeHTML("AdSense.html")
+```
 
 # Introduction to R and R Studio
 ## Powerful Statistical language: R
-  
+
   Without a doubt, R is nibbling other programming languages that popularly used by data scientists or statisticians. Recently, most of statisticians use R to analyze data, fit models, do research. Moreover, a lot of practitioners also tend to use R due to its free, open source and active community full of great researchers. Researchers and many other soft engineers help R community to be organicaly developed. All those cooperations are helping R to become one of the greatest statistical programming language in the world. R Studio, REvolution, GGplot2, Shiny App etc. are a few great tools in this community which play big role to make this language great. 
   
   For people who want to study frontier statistical methodologies, R helps them to be able to focus on the implementation of statistical methods. One can easily implement new estimation method or algorithms for simulation or comparison purpose, meanwhile, one can easily develop R packages for the methods or models they proposed, which can be used by practionor, maybe right after the method is published. This cannot happen before when statistician know few about software developing and engineers also care less about statistical theories. However, by learning a few of simple R package developing knowledge, one can develop statistical package for their new methods so that people in industry can quickly apply research fruits to accelare their business or improve their decision making, just as simple as clicking button in SPSS. On the other side, practitioners can also develop package for their own projects, which makes their intellectual property reproducible for further using (they don't necessarily need to publish their package to the public). Although open source may face some issues like infrequent maintenance or security, it makes the flow of knowledge seamless.
