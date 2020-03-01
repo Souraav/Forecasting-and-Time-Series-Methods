@@ -4,52 +4,53 @@ This is a course in the analysis of time series data with emphasis on appropriat
 
 Contributors:  
 Dr. Yichen Qin, Associate Professor of Business Analytics at University of Cincinnati
+
 Dr. Martin Levy, Professor of Business Analytics at University of Cincinnati
 
 # Lecture
 
 ## Introduction to time series, R, Rmarkdown
 
-[Intro](lecture/0_IntroR.html)
+[Intro](Lecture/0_IntroR.html)
 
 ## Stationarity, strictly stationary, weakly stationary, backshift operator, white noise ACF, PACF
 
-[Stationarity, ACF, PACF](lecture/1_Stationarity_ACF_PACF.html)
+[Stationarity, ACF, PACF](Lecture/1_Stationarity_ACF_PACF.html)
 
 <!--- ## Autoregression & Moving Average
 
-[AR, MA](lecture/2_AR_MA.html)
+[AR, MA](Lecture/2_AR_MA.html)
 
 ## ARMA & ARIMA
 
-[ARMA, ARIMA](lecture/3_ARMA_ARIMA.html)
+[ARMA, ARIMA](Lecture/3_ARMA_ARIMA.html)
 
 ## Model fitting
 
-[Model fitting](lecture/4_Model_fitting.html)
+[Model fitting](Lecture/4_Model_fitting.html)
 
 ## Augmented Dickey-Fuller test (ADF) 
 
-[ADF](lecture/5_ADF.html)
+[ADF](Lecture/5_ADF.html)
 
 ## Forecast
 
-[Forecast](lecture/6_Forecast.html)
+[Forecast](Lecture/6_Forecast.html)
 
 ## Seasonal ARIMA
 
-[Seasonal ARIMA](lecture/7_Seasonal_ARIMA.html)
+[Seasonal ARIMA](Lecture/7_Seasonal_ARIMA.html)
 
 ## vector autoregressive models (VAR)
 
-[VAR](lecture/8_VAR.html)
+[VAR](Lecture/8_VAR.html)
 
 ## Cointegration
 
-[Cointegration](lecture/9_Cointegration.html)
+[Cointegration](Lecture/9_Cointegration.html)
 
 ## Beyond ARIMA
 
-[Beyond ARIMA](lecture/10_Beyond_ARIMA.html)
+[Beyond ARIMA](Lecture/10_Beyond_ARIMA.html)
 
 just ---> 
