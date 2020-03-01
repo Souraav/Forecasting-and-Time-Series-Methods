@@ -1,0 +1,362 @@
+---
+title: "Forecasting and Time Series Methods Notes 8"
+author: "[Xiaorui Zhu](https://homepages.uc.edu/~zhuxr/) (zhuxr@mail.uc.edu)"
+output: 
+  html_document:
+    code_folding: show
+    fig_caption: yes
+    highlight: tango
+    number_sections: yes
+    theme: readable
+    toc: yes
+editor_options: 
+  chunk_output_type: console
+---
+<style type="text/css">
+body{ /* Normal  */
+      font-size: 20px;
+  }
+code.r{ /* Code block */
+    font-size: 16px;
+}
+pre { /* Code block - determines code spacing between lines */
+    font-size: 16px;
+}
+h1 { /* Header 1 */
+  color: DarkBlue;
+}
+h2 { /* Header 2 */
+  color: DarkBlue;
+}
+h3 { /* Header 3 */
+  color: DarkBlue;
+}
+</style>
+
+
+
+```{r, warning=FALSE,message=FALSE, results = 'hide'}
+# Install necessary packages
+list_packages <- c("AER", "dynlm", "tidyverse", "fpp", "fpp2", 
+                   "forecast", "readxl", "stargazer", "scales",
+                   "quantmod", "urca", "vars", "tseries", "sarima")
+new_packages <- list_packages[!(list_packages %in% installed.packages()[,"Package"])]
+if(length(new_packages)) install.packages(new_packages)
+
+# Load necessary packages
+lapply(list_packages, require, character.only = TRUE)
+```
+
+So far, we have dealt with univariate time series data, what about multiple variables?
+
+# Time Series Regression
+
+The time series models in the previous chapters allow for the inclusion of information from past observations, but not for the inclusion of other variables. 
+
+We considered regression models of the form
+$$
+Z_t=\beta_0 + \beta_1 X_{1,t} + ... \beta_k X_{k,t} + \epsilon_t
+$$
+
+In other words, $Z_t$ is a linear combination of $X_{1,t}$ ... $X_{k,t}$.  When $\epsilon_t$ is assumed to be an uncorrelated error term (i.e., it is white noise), this is a typical multiple linear regression.
+
+
+We further allow the errors from a regression to contain autocorrelation. To emphasise this change, we replace $\epsilon_t$ with $\eta_t$. The error series $\eta_t$ is assumed to follow an ARIMA model. For example, if $\eta_t$ follows an ARIMA(1,1,1) model, we can write
+
+$$
+Z_t=\beta_0 + \beta_1 X_{1,t} + ... \beta_k X_{k,t} + \eta_t\\
+(1-\phi_1 B)(1- B)\eta_t = (1-\theta_1 B) a_t
+$$
+
+Notice that the model has two error terms here — the error from the regression model, which we denote by $\eta_t$, and the error from the ARIMA model, which we denote by  $a_t$. Only the ARIMA model errors are assumed to be white noise.  
+
+Note that if $X_{1,t}$,...,$X_{k,t}$ are excluded from the model, the model becomes an ARIMA model.
+
+## Estimation
+
+We cannot use least square estimate for this model because:
+
+- The estimated coefficients are no longer the best estimates, as some information has been ignored in the calculation;
+- Any statistical tests associated with the model (e.g., t-tests on the coefficients) will be incorrect. In most cases, the p-values associated with the coefficients will be too small, and so some predictor variables will appear to be important when they are not. This is known as "spurious regression".
+- The AICc values of the fitted models are no longer a good guide as to which is the best model for forecasting.
+
+We use maximum likelihood estimation.
+
+An important consideration when estimating a regression with ARMA errors is that all of the variables in the model must first be stationary. Thus, we first have to check that $Z_t$ and all of the predictors appear to be stationary. If we estimate the model when any of these are non-stationary, the estimated coefficients will not be consistent estimates (and therefore may not be meaningful). One exception to this is the case where non-stationary variables are co-integrated. If there exists a linear combination of the non-stationary $Z_t$ and the predictors that is stationary, then the estimated coefficients will be consistent. We will explain this later.
+
+It is often desirable to maintain the form of the relationship between $Z_t$ and the predictors, and consequently it is common to difference all of the variables if any of them need differencing. The resulting model is then called a "model in differences", as distinct from a "model in levels", which is what is obtained when the original data are used without differencing.
+  
+If the above regression model with ARIMA(1,1,1) errors is differenced we obtain the model
+
+$$
+\nabla Z_t=\beta_0 + \beta_1 \nabla  X_{1,t} + ... \beta_k \nabla  X_{k,t} + \nabla \eta_t\\
+(1-\phi_1 B) \nabla \eta_t = (1-\theta_1 B) a_t
+$$
+
+R function `Arima()` will fit a regression model with ARIMA errors if the argument `xreg` is used. The order argument specifies the order of the ARIMA error model. 
+
+The `auto.arima()` function will also handle regression terms via the `xreg` argument. The user must specify the predictor variables to include, but `auto.arima()` will select the best ARIMA model for the errors.
+
+If differencing is required, then all variables are differenced during the estimation process, although the final model will be expressed in terms of the original variables.
+To include a constant in the differenced model, specify `include.drift=TRUE`.
+
+Here is an example
+
+We analyze the quarterly changes in personal consumption expenditure and personal disposable income from 1970 to 2016 Q3. We would like to forecast changes in expenditure based on changes in income.
+
+```{r}
+data(uschange)
+uschange
+autoplot(uschange[,1:2], facets=TRUE) +
+  xlab("Year") + ylab("") +
+  ggtitle("Quarterly changes in US consumption and personal income")
+```
+
+The data are clearly already stationary
+
+```{r}
+(fit <- auto.arima(uschange[,"Consumption"], xreg=uschange[,"Income"]))
+(fit <- Arima(uschange[,"Consumption"], order=c(1,0,2), xreg=uschange[,"Income"]))
+```
+
+The fitted model is
+
+$$
+Z_t =  0.599 + 0.203 X_t + \eta_t,\\
+\eta_t = 0.692 \eta_{t-1} + a_t + 0.576 a_{t−1} - 0.198 a_{t−2}
+$$
+
+where $a_t$ is white noise.
+
+We can recover estimates of both the $\eta_t$ and $a_t$ series using the `residuals()`. function.
+
+```{r}
+cbind("Regression Errors" = residuals(fit, type="regression"),
+      "ARIMA errors" = residuals(fit, type="innovation")) %>%
+  autoplot(facets=TRUE)
+```
+
+It is the ARIMA errors that should resemble a white noise series.
+
+```{r}
+checkresiduals(fit)
+
+uschange %>%
+  as.data.frame() %>%
+  ggplot(aes(x=Income, y=Consumption)) +
+    ylab("Consumption (quarterly % change)") +
+    xlab("Income (quarterly % change)") +
+    geom_point() +
+    geom_smooth(method="lm", se=FALSE)
+```
+
+
+## Forecast
+
+To forecast using a regression model with ARIMA errors, we need to forecast the regression part of the model and the ARIMA part of the model, and combine the results.
+
+When the predictors are themselves unknown, we must either model them separately, or use assumed future values for each predictor.
+
+We will calculate forecasts for the next eight quarters assuming that the future percentage changes in personal disposable income will be equal to the mean percentage change from the last forty years.
+
+```{r}
+fcast <- forecast(fit, xreg=rep(mean(uschange[,2]),20))
+autoplot(fcast) + xlab("Year") +
+  ylab("Percentage change")
+```
+
+The prediction intervals for this model are narrower than the ARIMA model for $Z_t$  because we are now able to explain some of the variation in the data using the income predictor.
+
+
+```{r}
+fit2 <- Arima(uschange[,"Consumption"], order=c(1,0,2))
+fcast2 <- forecast(fit2,h=20)
+autoplot(fcast2) + xlab("Year") +
+  ylab("Percentage change")
+```
+
+It is important to realise that the prediction intervals from regression models (with or without ARIMA errors) do not take into account the uncertainty in the forecasts of the predictors. So they should be interpreted as being conditional on the assumed (or estimated) future values of the predictor variables.
+
+**Another Example**
+
+```{r}
+data(elecdaily)
+elecdaily[, c("Demand","Temperature")] %>% autoplot(facets=TRUE)
+elecdaily %>% 
+  as.data.frame() %>%
+  ggplot(aes(x=Temperature, y=Demand)) +
+  geom_point()
+xreg <- cbind(MaxTemp = elecdaily[, "Temperature"],
+              MaxTempSq = elecdaily[, "Temperature"]^2,
+              Workday = elecdaily[, "WorkDay"])
+fit <- auto.arima(elecdaily[, "Demand"], xreg = xreg)
+checkresiduals(fit)
+fcast <- forecast(fit,
+  xreg = cbind(MaxTemp=rep(26,14), MaxTempSq=rep(26^2,14),
+    Workday=c(0,1,0,0,1,1,1,1,1,0,0,1,1,1)))
+autoplot(fcast) + ylab("Electricity demand (GW)")
+```
+
+# Stochastic and Deterministic Trends
+
+There are two different ways of modelling a linear trend. A deterministic trend is obtained using the regression model
+
+$$
+Z_t= \beta_0 + \beta_1 t + \eta_t,
+$$
+
+where $\eta_t$ is an ARMA process. A stochastic trend is obtained using the model 
+
+$$
+Z_t= \beta_0 + \beta_1 t + \eta_t,
+$$
+
+where  $\eta_t$  is an ARIMA process with $d=1$. In the latter case, we can difference both sides so that  $\nabla Z_t = \beta_1 + \nabla \eta_t$, where  $\nabla \eta_t$ is an ARMA process. In other words, 
+$$
+Z_t = Z_{t-1} + \beta_1 + \nabla \eta_t
+$$
+ 
+This is a random walk with drift, but here the error term is an ARMA process rather than simply white noise.
+
+Although these models appear quite similar (they only differ in the number of differences that need to be applied to  $\eta_t$ ), their forecasting characteristics are quite different.
+
+**Example: International visitors to Australia**
+We analyze the total number of international visitors to Australia each year from 1980 to 2015. We will fit both a deterministic and a stochastic trend model to these data.
+
+
+```{r}
+data(austa)
+autoplot(austa) + xlab("Year") +
+  ylab("millions of people") +
+  ggtitle("Total annual international visitors to Australia")
+```
+
+The deterministic trend model is obtained as follows:
+
+```{r}
+trend <- seq_along(austa)
+(fit1 <- auto.arima(austa, d=0, xreg=trend))
+```
+
+This model can be written as
+
+$$
+Z_t = 0.416 + 0.171 t + \eta_t\\
+\eta_t =  1.113 \eta_{t-1} -0.380 \eta_{t-2} + a_t
+$$
+
+where $a_t$ is white noise with $\sigma^2_a = 0.030$.  The estimated growth in visitor numbers is 0.17 million people per year.
+
+The stochastic trend model can be estimated.
+
+```{r}
+(fit2 <- auto.arima(austa, d=1))
+```
+
+This model can be written as 
+
+$$
+Z_t = z_{0} + 0.173 t + \eta_t\\
+\eta_t = \eta_{t-1} + a_t - 0.301 a_{t-1}
+$$
+where $a_t$ is white noise with $\sigma^2_a = 0.034$.  This model can be equivalently written as $\nabla Z_t = 0.173 + \nabla \eta_t$.
+
+In this case, the estimated growth in visitor numbers is also 0.17 million people per year. Although the growth estimates are similar, the prediction intervals are not, as Figure 9.10 shows. In particular, stochastic trends have much wider prediction intervals because the errors are non-stationary.
+
+```{r}
+fc1 <- forecast(fit1,
+  xreg = length(austa) + 1:10)
+fc2 <- forecast(fit2, h=10)
+autoplot(austa) +
+  autolayer(fc2, series="Stochastic trend") +
+  autolayer(fc1, series="Deterministic trend") +
+  ggtitle("Forecasts from trend models") +
+  xlab("Year") + ylab("Visitors to Australia (millions)") +
+  guides(colour=guide_legend(title="Forecast"))
+```
+
+There is an implicit assumption with deterministic trends that the slope of the trend is not going to change over time. On the other hand, stochastic trends can change, and the estimated growth is only assumed to be the average growth over the historical period, not necessarily the rate of growth that will be observed into the future. Consequently, it is safer to forecast with stochastic trends, especially for longer forecast horizons, as the prediction intervals allow for greater uncertainty in future growth.
+
+# VAR
+
+One limitation of the models that we have considered so far is that they impose a unidirectional relationship — the forecast variable is influenced by the predictor variables, but not vice versa.
+However, there are many cases where the reverse should also be allowed for — where all variables affect each other. 
+the changes in personal consumption expenditure were forecast based on the changes in personal disposable income. However, in this case a bi-directional relationship may be more suitable: an increase in consumption will lead to an increase in income and vice versa.
+
+Such feedback relationships are allowed for in the vector autoregressive (VAR) framework. In this framework, all variables are treated symmetrically. They are all modelled as if they all influence each other equally. In more formal terminology, all variables are now treated as "endogenous".
+
+A VAR model is a generalisation of the univariate autoregressive model for forecasting a vector of time series.21 It comprises one equation per variable in the system. To keep it simple, we will consider a two variable VAR with one lag. We write a 2-dimensional VAR(1) as
+
+$$
+Z_{t} = c_1 + \phi_{11,1} Z_{t-1} + \phi_{12,1} Y_{t-1} + a_{1,t}\\
+Y_{t} = c_2 + \phi_{21,1} Z_{t-1} + \phi_{22,1} Y_{t-1} + a_{2,t}
+$$
+where $a_{1,t}$ and $a_{2,t}$ are white noise processes that may be contemporaneously correlated.
+
+If the series are stationary, we forecast them by fitting a VAR to the data directly (known as a “VAR in levels”). If the series are non-stationary, we take differences of the data in order to make them stationary, then fit a VAR model (known as a “VAR in differences”).
+
+
+The other possibility is that the series may be non-stationary but cointegrated, which means that there exists a linear combination of them that is stationary. In this case, a VAR specification that includes an error correction mechanism, usually referred to as a vector error correction model (VEC), should be included.
+
+Forecasts are generated from a VAR in a recursive manner.  The one-step-ahead forecasts are generated by
+
+$$
+\hat{Z}_{1,t}(1) = \hat{c}_1 + \hat{\phi}_{11,1} Z_{1,t} + \hat{\phi}_{12,1} Z_{2,t}\\
+\hat{Z}_{2,t}(1) = \hat{c}_2 + \hat{\phi}_{21,1} Z_{1,t} + \hat{\phi}_{22,1} Z_{2,t}
+$$
+
+There are two decisions one has to make when using a VAR to forecast, namely how many variables (denoted by K) and how many lags (denoted by p) should be included in the system. The number of coefficients to be estimated in a VAR is equal to  $K+pK^2$  (or  $1+pK$  per equation). It is usual to keep  K  small and include only variables that are correlated with each other, and therefore useful in forecasting each other. Information criteria are commonly used to select the number of lags to be included.
+
+
+VAR models are implemented in the `vars` package in R. It contains a function `VARselect()` for selecting the number of lags p. 
+
+VARs are useful in several contexts:
+
+- forecasting a collection of related variables where no explicit interpretation is required;
+- testing whether one variable is useful in forecasting another (the basis of Granger causality tests);
+- impulse response analysis, where the response of one variable to a sudden but temporary change in another variable is analysed;
+- forecast error variance decomposition, where the proportion of the forecast variance of each variable is attributed to the effects of the other variables.
+  
+**Example**
+
+A VAR model for forecasting US consumption
+
+```{r}
+VARselect(uschange[,1:2], lag.max=8,
+  type="const")[["selection"]]
+```
+
+The R output shows the lag length selected by each of the information criteria available in the vars package.  We have met the AIC before, and SC is simply another name for the BIC (SC stands for Schwarz Criterion, after Gideon Schwarz who proposed it). HQ is the Hannan-Quinn criterion, and FPE is the “Final Prediction Error” criterion. Care should be taken when using the AIC as it tends to choose large numbers of lags. Instead, for VAR models, we prefer to use the BIC. 
+
+There is a large discrepancy between the VAR(5) selected by the AIC and the VAR(1) selected by the BIC. This is not unusual. As a result we first fit a VAR(1), as selected by the BIC.
+
+
+```{r}
+var1 <- VAR(uschange[,1:2], p=1, type="const")
+serial.test(var1, lags.pt=10, type="PT.asymptotic")
+var2 <- VAR(uschange[,1:2], p=2, type="const")
+serial.test(var2, lags.pt=10, type="PT.asymptotic")
+```
+
+In similar fashion to the univariate ARIMA methodology, we test that the residuals are uncorrelated using a Portmanteau test. Both a VAR(1) and a VAR(2) have some residual serial correlation, and therefore we fit a VAR(3).
+
+```{r}
+var3 <- VAR(uschange[,1:2], p=3, type="const")
+serial.test(var3, lags.pt=10, type="PT.asymptotic")
+var3
+```
+
+We can conduct Granger causality tests as follows
+```{r}
+summary(var3)
+```
+
+The residuals for this model pass the test for serial correlation. The forecasts generated by the VAR(3) are plotted below.
+
+```{r}
+forecast(var3) %>%
+  autoplot() + xlab("Year")
+```
+
+
+

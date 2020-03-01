@@ -1,0 +1,264 @@
+---
+title: "Forecasting and Time Series Methods Notes 9"
+author: "[Xiaorui Zhu](https://homepages.uc.edu/~zhuxr/) (zhuxr@mail.uc.edu)"
+output: 
+  html_document:
+    code_folding: show
+    fig_caption: yes
+    highlight: tango
+    number_sections: yes
+    theme: readable
+    toc: yes
+editor_options: 
+  chunk_output_type: console
+---
+<style type="text/css">
+body{ /* Normal  */
+      font-size: 20px;
+  }
+code.r{ /* Code block */
+    font-size: 16px;
+}
+pre { /* Code block - determines code spacing between lines */
+    font-size: 16px;
+}
+h1 { /* Header 1 */
+  color: DarkBlue;
+}
+h2 { /* Header 2 */
+  color: DarkBlue;
+}
+h3 { /* Header 3 */
+  color: DarkBlue;
+}
+</style>
+
+```{r, warning=FALSE, message=FALSE, results = 'hide'}
+# Install necessary packages
+list_packages <- c("AER", "dynlm", "tidyverse", "fpp", "fpp2", 
+                   "forecast", "readxl", "stargazer", "scales",
+                   "quantmod", "urca", "vars", "tseries", "sarima")
+new_packages <- list_packages[!(list_packages %in% installed.packages()[,"Package"])]
+if(length(new_packages)) install.packages(new_packages)
+
+# Load necessary packages
+lapply(list_packages, require, character.only = TRUE)
+```
+
+# Orders of Integration
+
+When a time series $Z_t$ has a unit autoregressive root,  $Z_t$ is integrated of order one. This is often denoted by $Z_t \sim I(1)$. We simply say that $Z_t$ is $I(1)$. If $Z_t$ is $I(1)$, its first difference $\nabla Z_t$ is stationary.
+
+$Z_t$ is $I(2)$ when $Z_t$ needs to be differenced twice in order to obtain a stationary series. Using the notation introduced here, if $Z_t$ is $I(2)$, its first difference $\nabla Z_t$ is $I(1)$  and its second difference $\nabla^2 Z_t$ is stationary. $Z_t$ is $I(d)$ when $Z_t$ must be differenced $d$ times to obtain a stationary series.
+
+When $Z_t$ is stationary, it is integrated of order 0 so $Z_t$ is $I(0)$.
+
+# Cointegration
+
+When $Z_t$ and $Y_t$ are $I(1)$ and if there is a $\theta$ such that $Y_t-\theta Z_t$ is $I(0)$, $Z_t$ and $Y_t$ are cointegrated. Put differently, cointegration of $Z_t$ and $Y_t$ means that $Z_t$ and $Y_t$ have the same or a common stochastic trend and that this trend can be eliminated by taking a specific difference of the series such that the resulting series is stationary.
+
+R functions for cointegration analysis are implemented in the package `urca`.
+
+
+It is fairly easy to obtain differences of time series in R. For example, the function `diff()` returns suitably lagged and iterated differences of numeric vectors, matrices and time series objects of the class ts.
+
+Two series are cointegrated when their trends are not too far apart and are in some sense similar. This vague statement, though, can be made precise by conducting a cointegration test, which tests whether the residuals from regressing one series on the other one are stationary. If they are, the series are cointegrated. Thus, a cointegration test is in fact a Dickey-Fuler stationarity test on residuals, and its null hypothesis is of noncointegration. In other words, we would like to reject the null hypothesis in a cointegration test, as we wanted in a stationarity test.
+
+Let us apply this method to determine the state of cointegration between the series  f  and  b  in dataset  `usa.rda`. 104 observations, quarterly data, (1984:Q1 - 2009:Q4).
+
+`gdp` : real US gross domestic product
+
+`inf` : annual inflation rate
+	
+`f` : Federal Funds rate
+
+`b` : 3-year Bond rate
+
+```{r}
+load("usa.rda")
+usa
+usa.ts <- ts(usa, start=c(1984,1), end=c(2009,4),
+               frequency=4)
+Dgdp <- diff(usa.ts[,1])
+Dinf <- diff(usa.ts[,"inf"])
+Df <- diff(usa.ts[,"f"])
+Db <- diff(usa.ts[,"b"])
+usa.ts.df <- ts.union(gdp=usa.ts[,1], # package tseries
+                      inf=usa.ts[,2], 
+                      f=usa.ts[,3],
+                      b=usa.ts[,4],
+                      Dgdp,Dinf,Df,Db,
+                      dframe=TRUE)
+
+plot(usa.ts.df$f)
+points(usa.ts.df$b,type="l",lty=2)
+acf(usa.ts.df$f)
+adf.test(usa.ts.df$f, k=10)
+acf(usa.ts.df$b)
+adf.test(usa.ts.df$b, k=10)
+```
+
+
+```{r}
+fb.dyn <- dynlm(usa.ts.df$b~usa.ts.df$f)
+ehat.fb <- resid(fb.dyn)
+adf.test(ehat.fb)
+test=ur.df(ehat.fb,type="trend",lags = 4)
+summary(test)
+test=ur.df(ehat.fb,type="none",lags = 1)
+summary(test)
+```
+In conclusion, we reject the null hypothesis that the residuals have unit roots, therefore the series are cointegrated.
+
+R  has a special function to perform cointegration tests, function po.test in package tseries. (The name comes from the method it uses, which is called “Phillips-Ouliaris.”) The main argument of the function is a matrix having in its first column the dependent variable of the cointegration equation and the independent variables in the other columns. Let me illustrate its application in the case of the same series  fb  and  f .
+
+```{r}
+bfx <- as.matrix(cbind(usa.ts.df$b,usa.ts.df$f), demean=FALSE)
+po.test(bfx)
+```
+
+The PO test marginally rejects the null of no cointegration at the 5 percent level.
+
+
+
+
+
+
+
+# Vector Error Correction
+
+If two  I(1) time series  $Z_t$  and  $Y_t$  are cointegrated, their differences are stationary and can be modeled in a VAR which is augmented by the regressor  $Z_{t−1}− \beta_0 - \beta_1 Y_{t−1}$. This is called a vector error correction model (VEC) and  $Z_t − \beta_0 - \beta_1 Y_t$ is called the error correction term. Lagged values of the error correction term are useful for predicting  $\nabla Z_t$  and/or  $\nabla Y_t$.
+
+$$
+\nabla Z_t = c_1 + \gamma (Z_{t−1}− \beta_0 - \beta_1 Y_{t−1}) + a_{1,t}\\
+\nabla Y_t = c_2 + \gamma (Z_{t−1}− \beta_0 - \beta_1 Y_{t−1}) + a_{2,t}
+$$
+
+**Example**
+
+The dataset  `gdp` , which includes real GDP series for Australia and USA for the period since 1970:Q1 to 2000:Q4. First we determine the order of integration of the two series.
+
+```{r}
+load("gdp.rda")
+gdp
+gdp <- ts(gdp, start=c(1970,1), end=c(2000,4), frequency=4)
+
+ts.plot(gdp[,"usa"],gdp[,"aus"], type="l", 
+        lty=c(1,2), col=c(1,2))
+legend("topleft", border=NULL, legend=c("USA","AUS"), 
+       lty=c(1,2), col=c(1,2))
+```
+
+The two series in levels reveal a common trend and, therefore, suggest that the series are nonstationary.
+
+```{r}
+adf.test(gdp[,"usa"])
+adf.test(gdp[,"aus"])
+adf.test(diff(gdp[,"usa"]))
+adf.test(diff(gdp[,"aus"]))
+```
+
+The stationarity tests indicate that both series are I(1), Let us now test them for cointegration.  We regression `aus` on `usa` to obtain the residuals and check its stationarity.
+
+```{r}
+cint1.dyn <- dynlm(aus~usa-1, data=gdp)
+summary(cint1.dyn)
+ehat <- resid(cint1.dyn)
+plot(ehat)
+adf.test(ehat)
+summary(ur.df(ehat,type="trend",lags = 4))
+summary(ur.df(ehat,type="drift",lags = 4))
+summary(ur.df(ehat,type="none",lags = 4))
+```
+
+Our test rejects the null of no cointegration, meaning that the series are cointegrated. With cointegrated series we can construct a VEC model to better understand the causal relationship between the two variables.
+
+```{r}
+vecaus<- dynlm(d(aus)~L(ehat), data=gdp)
+vecusa <- dynlm(d(usa)~L(ehat), data=gdp)
+summary(vecaus)
+summary(vecusa)
+```
+
+The coefficient on the error correction term ( `L(ehat)` ) is significant for Australia, suggesting that changes in the US economy do affect Australian economy; the error correction coefficient in the US equation is not statistically significant, suggesting that changes in Australia do not influence American economy. To interpret the sign of the error correction coefficient, one should remember that  the residual  measures the deviation of Australian economy from its cointegrating level of 0.985 of the US economy (see the value of the slope in `cint1.dyn`).
+
+
+# VAR as a Solution to Non-cointegrated Time Series
+
+On the other hand, the VAR model can be used when the two variables $Z_t$ and $Y_t$ under study are I(1) but not cointegrated. Here is an example.
+
+Let us look at the income-consumption relationship based on the  fred  detaset, where consumption and income are already in logs, and the period is 1960:Q1 to 2009:Q4. 200 observations on the following 2 variables: `c`, log of real consumption expenditure; `y`, log of real disposable income.
+
+```{r}
+load("fred.rda")
+fred
+fred <- ts(fred, start=c(1960,1),end=c(2009,4),frequency=4)
+ts.plot(fred[,"c"],fred[,"y"], type="l", 
+        lty=c(1,2), col=c(1,2))
+legend("topleft", border=NULL, legend=c("c","y"), 
+       lty=c(1,2), col=c(1,2))
+```
+
+Are the two series cointegrated?
+
+```{r}
+acf(fred[,"c"])
+acf(fred[,"y"])
+adf.test(fred[,"c"])
+adf.test(fred[,"y"])
+adf.test(diff(fred[,"c"]))
+adf.test(diff(fred[,"y"]))
+cointcy <- dynlm(c~y, data=fred)
+ehat <- resid(cointcy)
+adf.test(ehat)
+```
+
+Figure shows a long serial correlation sequence; therefore, I will let  R  calculate the lag order in the ADF test. As the results of the above adf and cointegration tests show, the series are both I(1) but they fail the cointegration test (the series are not cointegrated.) (Please rememebr that the adf.test function uses a constant and trend in the test equation; therefore, the critical values are not the same as in the textbook. However, the results of the tests should be the same most of the time.)
+
+```{r}
+Dc <- diff(fred[,"c"])
+Dy <- diff(fred[,"y"])
+varmat <- as.matrix(cbind(Dc,Dy))
+varfit <- VAR(varmat) # `VAR()` from package `vars`
+summary(varfit)
+```
+
+Function VAR(), which is part of the package vars (Pfaff 2013), accepts the following main arguments: y= a matrix containing the endogenous variables in the VAR model, p= the desired lag order (default is 1), and exogen= a matrix of exogenous variables. (VAR is a more powerful instrument than I imply here; please type ?VAR() for more information.)
+
+# Spurious Regression
+
+Nonstationarity can lead to spurious regression, an apparent relationship between variables that are, in reality not related. The following code sequence generates two independent random walk processes,  y  and  x , and regresses  y  on  x .
+
+```{r}
+T <- 1000
+set.seed(1357)
+y <- ts(rep(0,T))
+vy <- ts(rnorm(T))
+for (t in 2:T){
+  y[t] <- y[t-1]+vy[t]
+}
+
+set.seed(4365)
+x <- ts(rep(0,T))
+vx <- ts(rnorm(T))
+for (t in 2:T){
+  x[t] <- x[t-1]+vx[t]
+}
+y <- ts(y[300:1000])
+x <- ts(x[300:1000])
+ts.plot(y,x, ylab="y and x")
+```
+
+
+```{r}
+spurious.ols <- lm(y~x)
+summary(spurious.ols)
+```
+
+The summary output of the regression shows a strong correlation between the two variables, thugh they have been generated independently. (Not any two randomly generated processes need to create spurious regression, though.) Figure 12.3 depicts the two time series,  y  and  x , and Figure 12.4 shows them in a scatterplot.
+
+```{r}
+plot(x, y, type="p", col="grey")
+```
+
+

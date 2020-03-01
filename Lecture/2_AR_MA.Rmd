@@ -1,0 +1,743 @@
+---
+title: "Forecasting and Time Series Methods Notes 2"
+author: "[Xiaorui Zhu](https://homepages.uc.edu/~zhuxr/) (zhuxr@mail.uc.edu)"
+output: 
+  html_document:
+    code_folding: show
+    fig_caption: yes
+    highlight: tango
+    number_sections: yes
+    theme: readable
+    toc: yes
+editor_options: 
+  chunk_output_type: console
+---
+<style type="text/css">
+body{ /* Normal  */
+      font-size: 20px;
+  }
+code.r{ /* Code block */
+    font-size: 16px;
+}
+pre { /* Code block - determines code spacing between lines */
+    font-size: 16px;
+}
+h1 { /* Header 1 */
+  color: DarkBlue;
+}
+h2 { /* Header 2 */
+  color: DarkBlue;
+}
+</style>
+
+R packages:
+```{r, warning=FALSE, message=FALSE, results = 'hide'}
+# Install necessary packages
+list_packages <- c("forecast", "readxl", "stargazer", "fpp", 
+                   "fpp2", "scales", "quantmod", "urca",
+                   "vars", "tseries", "ggplot2", "dplyr")
+new_packages <- list_packages[!(list_packages %in% installed.packages()[,"Package"])]
+if(length(new_packages)) install.packages(new_packages)
+
+# Load necessary packages
+lapply(list_packages, require, character.only = TRUE)
+```
+
+# Box-Jenkins Methodology and ARIMA Models
+
+*Note that Box is George Box who said "all models are wrong, some are useful".*
+
+There is a class of parametric time series models, autoregressive integrated moving average (ARIMA) models, which provides a rational basis for the generating mechanism of time series data.  To work with ARIMA for prediction, we will follow the 3-stage iterative procedure as follows.
+
+(1) identification: selection of tentative ARIMA model using sample ACF $\hat{\rho}_k$.
+(2) estimation of model parameters
+(3) diagnostic checking: does the model fit the data?  If yes, go ahead with forecast;  if no, go back to (1).
+
+In this course, we will follow this procedure as much as we can.
+
+**ARIMA Models**
+
+First let $\tilde{Z}_t=Z_t-\mu$, i.e., centered random variable.  Here is a list of all ARIMA models.
+
+**Autoregressive models (AR)**
+\begin{align*}
+AR(1): \tilde{Z}_t &= \phi_1 \tilde{Z}_{t-1} + a_t\\
+AR(2): \tilde{Z}_t &= \phi_1 \tilde{Z}_{t-1} + \phi_2 \tilde{Z}_{t-2} + a_t\\
+&...\\
+AR(p): \tilde{Z}_t &= \phi_1 \tilde{Z}_{t-1} + ... + \phi_p \tilde{Z}_{t-p} + a_t
+\end{align*}
+
+where $a_t$ is white noise and is commonly referred to as "innovation" or "shock."
+
+> Why Innovation?
+> The predictable components of your time-series are removed, so the leftover seems the only unknown thing. So is was called "innovation". 
+
+**Moving average models (MA)**
+\begin{align*}
+MA(1): \tilde{Z}_t &= a_t - \theta_1 a_{t-1}\\
+MA(2): \tilde{Z}_t &= a_t - \theta_1 a_{t-1} - \theta_2 a_{t-2}\\
+&...\\
+MA(q): \tilde{Z}_t &= a_t - \theta_1 a_{t-1} - ... - \theta_q a_{t-q}
+\end{align*}
+
+**Autoregressive moving average models (ARMA)**
+\begin{align*}
+ARMA(1,1): \tilde{Z}_t &= \phi_1 \tilde{Z}_{t-1} + a_t - \theta_1 a_{t-1}\\
+&...\\
+ARMA(p,q): \tilde{Z}_t &= \phi_1 \tilde{Z}_{t-1} + ... + \phi_p \tilde{Z}_{t-p} + a_t - \theta_1 a_{t-1} - ... - \theta_q a_{t-q}
+\end{align*}
+
+For ARIMA, we will come back to it later.
+
+**Notations for AR, MA, ARMA models:**
+
+If we define  
+$$\phi(B) = 1 - \phi_1 B - \phi_2 B^2 - ... -\phi_p B^p\\
+\theta(B) = 1 - \theta_1 B - \theta_2 B^2 - ... -\theta_q B^q$$
+as two polynomials of order $p$ and $q$.  
+
+Then AR(p) can be written as
+\begin{align*}
+\phi(B)\tilde{Z}_t&=a_t\\
+(1 - \phi_1 B  - ... -\phi_p B^p)\tilde{Z}_t&=a_t\\
+\tilde{Z}_t - \phi_1 \tilde{Z}_{t-1} - ... -\phi_p \tilde{Z}_{t-p}&=a_t\\
+\tilde{Z}_t &= \phi_1 \tilde{Z}_{t-1} + ... +\phi_p \tilde{Z}_{t-p} +a_t\\
+\end{align*}
+
+Similarly, MA(q) can be written as
+\begin{align*}
+\tilde{Z}_t&= \theta(B)a_t\\
+\tilde{Z}_t&= (1 - \theta_1 B - ... -\theta_q B^q)a_t\\
+\tilde{Z}_t&= a_t - \theta_1 a_{t-1} - ... - \theta_q a_{t-q}\\
+\end{align*}
+
+For example, AR(1) is $(1 - \phi_1 B)\tilde{Z}_t=a_t$ and MA(1) is $\tilde{Z}_t=(1 - \theta_1 B)a_t$.
+
+Lastly, ARMA(p,q) can be written as
+\begin{align*}
+\phi(B)\tilde{Z}_t&=\theta(B)a_t\\
+(1 - \phi_1 B - ... -\phi_p B^p)\tilde{Z}_t&=(1 - \theta_1 B - ... -\theta_q B^q)a_t\\
+\tilde{Z}_t - \phi_1 \tilde{Z}_{t-1} - ... -\phi_p \tilde{Z}_{t-p}&=a_t - \theta_1 a_{t-1} - ... - \theta_q a_{t-q}\\
+\tilde{Z}_t &= \phi_1 \tilde{Z}_{t-1} + ... +\phi_p \tilde{Z}_{t-p} +a_t - \theta_1 a_{t-1} - ... - \theta_q a_{t-q}\\
+\end{align*}
+
+
+
+# AR models
+
+## AR(1)
+
+AR(1) can be written as any of the following forms.
+\begin{align*}
+\phi(B)\tilde{Z}_t&=a_t\\
+(1 - \phi_1 B)\tilde{Z}_t&=a_t\\
+\tilde{Z}_t &= \phi_1 \tilde{Z}_{t-1}  + a_t\\
+Z_t-\mu &= \phi_1 (Z_{t-1}-\mu)  + a_t\\
+Z_t &= c + \phi_1 Z_{t-1}  + a_t\\
+\end{align*}
+where $c=\mu(1-\phi_1)$.
+
+**To ensure AR(1) is stationary (we mostly work with the concept of weakly stationary through the course), we need $|\phi_1|<1$.**  
+
+To see why $|\phi_1|<1$ is sufficient for stationarity, we can rewrite the AR(1) as 
+\begin{align*}
+\tilde{Z}_t &= \phi_1 \tilde{Z}_{t-1}  + a_t\\
+&= \phi_1 (\phi_1 \tilde{Z}_{t-2}  + a_{t-1})  + a_t\\
+&...\\
+&= \phi_1^k \tilde{Z}_{t-k} + \phi_1^{k-1} a_{t-k+1} + ... \phi_1 a_{t-1} + a_t
+\end{align*}
+
+Let $k \to \infty$, then since $|\phi_1|<1$, we have $\phi_1^k \to 0$, that is
+\begin{align*}
+\tilde{Z}_t &= \sum_{j=1}^{\infty} \phi_1^{j} a_{t-j} + a_t
+\end{align*}
+Therefore, $\mathbb{E}Z_t=0$, $\text{Var}[Z_t]=\sum_{j=1}^{\infty} \phi_1^{2j} \sigma^2_a + \sigma^2_a$, and $\gamma_k$ and so on.
+
+**A more general rule for ensuring stationarity is that the root of the polynomial $(1-\phi_1B)=0$ to be outside of the unit circle.**
+\begin{align*}
+1-\phi_1 B = 0 \Rightarrow B=\frac{1}{\phi_1}
+\end{align*}
+To let the root be outside of the unit circle, we have
+\begin{align*}
+|B|=\Big|\frac{1}{\phi_1}\Big| > 1 \quad 
+\Rightarrow \quad |\phi_1|<1
+\end{align*}
+That is, AR(1) is stationary if and only if $|\phi_1|<1$.
+
+Remark: the polynomial $\phi(B)=1-\phi_1B=0$ is called the **characteristic equation** for this time series model.  The root of the equation is $B=1/\phi_1$.  Note that the stationary condition $|\phi_1|<1$ is equivalent to the condition that the roots of the characteristic equation $\phi(B)=0$ lie outside of the unit circle of the complex plane.
+
+Remark: If $\phi_1=1$, the model becomes 
+$$\tilde{Z}_t = \tilde{Z}_{t-1}  + a_t.$$
+This model is not stationary (verify it).  This is called a **random walk**, commonly used to model stock prices and many other economic activities. Note that if we define $W_t=\tilde{Z}_t - \tilde{Z}_{t-1}$, i.e., 1st order difference of $Z_t$, then $W_t=a_t$ is stationary, in fact, it is a white noise.  This means that **by differencing the data from the nonstationary time series model, we can transform data to a stationary time series model.**  When $|\phi_1|=1$, we call this AR(1)  **homogeneous non-stationary**.
+
+Here, we simulate data according to AR(1) using different values of $\phi_1=0.1,0.5,0.95,1$.  As we can see as long as $|\phi_1|<1$, the time series stays in certain range, i.e., constant variance, which indicates stationarity.  
+```{r}
+set.seed(1234)
+n=2000
+ts1=arima.sim(n = n, list(ar = 0.1,  ma = 0), sd = 1)
+ts2=arima.sim(n = n, list(ar = 0.5,  ma = 0), sd = 1)
+ts3=arima.sim(n = n, list(ar = 0.95,  ma = 0), sd = 1)
+ts4=as.ts(cumsum(rnorm(n)))
+ts.plot(ts4,ts3,ts2,ts1,col=c("black","red","blue","green"))
+```
+
+When $\phi_1=1$, the time series explodes.  In fact, we repeatedly generate from AR(1) with $\phi_1=1$, and the results are more obvious.
+```{r}
+set.seed(1234)
+MC=50
+n=500
+ts_mat=matrix(NA,n,MC)
+for (it in 1:MC)
+{
+  ts_mat[,it]=as.ts(cumsum(rnorm(n)))
+}
+ts.plot(ts_mat)
+abline(h=0,col="blue")
+```
+
+ **Unit root:** $\phi_1=1$ is called unit root because the root of $\phi(B)$ is on the unit circle.  We need to be careful with unit root problem because it destroys the stationarity that we assume in the model.  Often times, in real data that we work on,   $\phi_1$ is not exactly 1 but $\phi_1 \approx 1$, this is called **near unit root**. 
+
+**For the rest of this section, let's assume $|\phi_1|<1$**
+
+**Autocovariance of AR(1):**
+
+\begin{align*}
+\gamma_k &= \mathbb{E}[\tilde{Z}_t \tilde{Z}_{t-k}]= \mathbb{E}[\phi_1 \tilde{Z}_{t-1} \tilde{Z}_{t-k} + \tilde{Z}_{t-k} a_t]\\
+&= \phi_1 \gamma_{k-1} + 0 = \phi_1 \phi_1 \gamma_{k-2}\\
+&= \phi_1^k \gamma_{0}
+\end{align*}
+Note that $\mathbb{E}[\tilde{Z}_{t-k} a_t]=0$ because $\tilde{Z}_{t-k}$ and $a_t$ are independent, that is, $a_t$ happens after $\tilde{Z}_{t-k}$ which only depends on $a_{t-k}, a_{t-k-1},...$
+
+**Variance of AR(1)**
+
+Starting from the definition of variance, we have
+\begin{align*}
+\text{Var}[\tilde{Z}_t] &=\mathbb{E} [(Z_t-\mu)^2] \\
+&=\mathbb{E} [\tilde{Z}_t^2]\\
+&=\phi_1^2 \mathbb{E}[\tilde{Z}_{t-1}^2] + 2 \mathbb{E} [\tilde{Z}_{t-1} a_t] + \mathbb{E} [a_t^2]\\
+&= \phi_1^2 \text{Var}[\tilde{Z}_{t-1}] + \sigma^2_a\\
+&= \phi_1^2 \text{Var}[\tilde{Z}_t] + \sigma^2_a
+\end{align*}
+The last step is because of stationarity, i.e., variance unchanged.  Therefore, we have
+\begin{align*}
+\text{Var}[\tilde{Z}_t] =\frac{\sigma^2_a}{1 - \phi_1^2} 
+\end{align*}
+
+It is easy to see that if $\phi_1=1$, the variance explodes.
+
+**Estimation of Autocovariance of AR(1):**
+
+In practice, we never know the true autocovariance, therefore, we need to estimate it by 
+$$
+\hat{\gamma}_0 = \frac{1}{n} \sum_{t=1}^{n} (z_t-\bar{z})^2 
+$$
+$$
+\hat{\gamma}_1 = \frac{1}{n-1} \sum_{t=2}^{n} (z_t-\bar{z})(z_{t-1}-\bar{z})
+$$
+$$
+\hat{\gamma}_k = \frac{1}{n-k} \sum_{t=1+k}^{n} (z_t-\bar{z})(z_{t-k}-\bar{z})
+$$
+where $\bar{z}=1/n \sum_{t=1}^{n} z_t$ is the sample mean.
+
+**ACF of AR(1):** 
+By the definition of ACF, we have ACF of AR(1) as
+\begin{align*}
+\rho_k=\frac{\gamma_k}{\gamma_0}=\begin{cases}
+1, \quad k=0\\
+\phi_1^{|k|}, \quad k \neq 0
+\end{cases}
+\end{align*}
+
+In practice, we don't know the true ACF $\rho_k$, so we have to estimate the ACF by sample ACF, $\hat{\rho}_k$.
+$$
+\hat{\rho}_k=\frac{\hat{\gamma}_k}{\hat{\gamma}_0}
+$$
+
+Here are some examples of AR(1) with their ACFs.  We set $\phi_1=0.5,-0.5$
+```{r, fig.width=9,fig.height=6}
+n=200000
+ts1=arima.sim(n = n, list(ar = 0.5),  sd = 1)
+ts2=arima.sim(n = n, list(ar = -0.5), sd = 1)
+par(mfrow=c(2,3))
+acf(ts1,ylim=c(-1,1),lag.max=15)
+plot.ts(ts1[1:500])
+acf(ts1[1:500],ylim=c(-1,1),lag.max=15)
+acf(ts2,ylim=c(-1,1),lag.max=15)
+plot.ts(ts2[1:500])
+acf(ts2[1:500],ylim=c(-1,1),lag.max=15)
+```
+
+
+Some extreme examples of AR(1).  We set $\phi_1=0.95,-0.95$
+
+```{r, fig.width=9,fig.height=6}
+n=200000
+ts1=arima.sim(n = n, list(ar = 0.95),  sd = 1)
+par(mfrow=c(2,3))
+acf(ts1,ylim=c(-1,1),lag.max=60)
+plot.ts(ts1[1:70])
+abline(h=0)
+acf(ts1[1:70],ylim=c(-1,1),lag.max=60)
+ts2=arima.sim(n = n, list(ar = -0.95), sd = 1)
+acf(ts2,ylim=c(-1,1),lag.max=60)
+plot.ts(ts2[1:70])
+abline(h=0)
+acf(ts2[1:70],ylim=c(-1,1),lag.max=60)
+```
+
+The first example is called positive serial correlation in $Z_t$.  The second is called negative serial correlation in $Z_t$.
+
+**PACF of AR(1)**
+
+Based on the relationship between ACF and PACF, we can derive the PACF of AR(1) as
+
+\begin{align*}
+\phi_{kk}=\begin{cases}
+\phi_1=\rho_1, \quad k=1\\
+0, \quad \quad k \geq 1
+\end{cases}
+\end{align*}
+
+Here are some examples of AR(1) with their PACFs.  We set $\phi_1=0.5,-0.5$
+
+```{r, fig.width=9,fig.height=6}
+n=200000
+ts1=arima.sim(n = n, list(ar = 0.5),  sd = 1)
+ts2=arima.sim(n = n, list(ar = -0.5), sd = 1)
+par(mfrow=c(2,3))
+pacf(ts1,ylim=c(-1,1),lag.max=10)
+plot.ts(ts1[1:300])
+pacf(ts1[1:300],ylim=c(-1,1),lag.max=10)
+pacf(ts2,ylim=c(-1,1),lag.max=10)
+plot.ts(ts2[1:300])
+pacf(ts2[1:300],ylim=c(-1,1),lag.max=10)
+```
+
+
+## AR(2)
+
+AR(2) can be written as any of the following forms.
+\begin{align*}
+\phi(B)\tilde{Z}_t&=a_t\\
+(1 - \phi_1 B - \phi_2 B^2)\tilde{Z}_t&=a_t\\
+\tilde{Z}_t &= \phi_1 \tilde{Z}_{t-1} + \phi_2 \tilde{Z}_{t-2} + a_t\\
+Z_t-\mu &= \phi_1 (Z_{t-1}-\mu)  + \phi_2 (Z_{t-2}-\mu)  + a_t\\
+Z_t &= c + \phi_1 Z_{t-1} +\phi_2 Z_{t-2} + a_t\\
+\end{align*}
+where $c=\mu(1-\phi_1-\phi_2)$.
+
+**To ensure AR(2) is stationary, we need the roots (i.e., two roots) of the polynomial $(1-\phi_1B-\phi_2B^2)=0$ to be outside of the unit circle.**
+
+Denote two roots as 
+\begin{align*}
+R_1, R_2 = \frac{-\phi_1 \pm \sqrt{\phi_1^2 + 4 \phi_2}}{2\phi_2}\\
+|R_1|>1, |R_2|>1 \Leftrightarrow 
+\begin{cases}
+\phi_1+\phi_2<1\\
+\phi_2-\phi_1<1\\
+-1<\phi_2<1
+\end{cases}
+\end{align*}
+
+In other words, the pair $(\phi_1, \phi_2)$ has to be inside of the triangle below in order to have stationary AR(2).
+```{r,fig.width=4,fig.height=4}
+plot(0,0,type="n",xlab="phi_1",ylab="phi_2",xlim=c(-3,3),ylim=c(-2,2))
+abline(h=0,col="grey")
+abline(v=0,col="grey")
+lines(c(0,2),c(1,-1))
+lines(c(0,-2),c(1,-1))
+lines(c(-2,2),c(-1,-1))
+```
+
+**Autocovariance of AR(2)**
+\begin{align*}
+\mathbb{E}[\tilde{Z}_t \tilde{Z}_{t-k}] &= \mathbb{E}[\phi_1 \tilde{Z}_{t-1} \tilde{Z}_{t-k} + \phi_2 \tilde{Z}_{t-2} \tilde{Z}_{t-k} + \tilde{Z}_{t-k} a_t]\\
+\gamma_k &= \phi_1 \gamma_{k-1} + \phi_2 \gamma_{k-2}\\
+\rho_k &= \phi_1 \rho_{k-1} + \phi_2 \rho_{k-2}
+\end{align*}
+This is called Yule-Walker equation (explained later).  
+
+Let $k=1,2$, we have the following (note $\rho_0=1$, $\rho_{-1}=\rho_1$, and  $\rho_{-2}=\rho_2$... )
+
+\begin{align*}
+\begin{array}
+{r}
+\rho_1 = \phi_1 + \phi_2 \rho_1\\
+\rho_2 = \phi_1 \rho_1 + \phi_2
+\end{array}
+\Leftrightarrow
+\begin{cases}
+\rho_1 = \frac{\phi_1}{1- \phi_2}\\
+\rho_2 = \frac{\phi_1^2}{1- \phi_2} + \phi_2
+\end{cases} \Leftrightarrow
+\begin{cases}
+\phi_1 = \frac{\rho_1 (1-\rho_2)}{1- \rho_1^2}\\
+\phi_2 = \frac{\rho_2-\rho_1^2}{1- \rho_1^2}
+\end{cases}
+\end{align*}
+
+For $k>2$, we have
+\begin{align*}
+\rho_k = \phi_1 \rho_{k-1} + \phi_2 \rho_{k-2}
+\end{align*}
+
+**Variance of AR(2)**
+
+Set $k=0$, we have
+\begin{align*}
+\mathbb{E}[\tilde{Z}_t \tilde{Z}_{t-k}] &= \mathbb{E}[\phi_1 \tilde{Z}_{t-1} \tilde{Z}_{t-k} + \phi_2 \tilde{Z}_{t-2} \tilde{Z}_{t-k} + \tilde{Z}_{t-k} a_t]\\
+\gamma_0 &= \phi_1 \gamma_1 + \phi_2 \gamma_2  + \sigma^2_a\\
+\gamma_0 &= \phi_1 \rho_1 \gamma_0 + \phi_2 \rho_2 \gamma_0   + \sigma^2_a\\
+\end{align*}
+
+we can obtain the variance of AR(2) as
+\begin{align*}
+\text{Var}(Z_t)=\frac{\sigma^2_a}{1-\rho_1 \phi_1 - \rho_2 \phi_2}
+\end{align*}
+
+**ACF of AR(2)**
+
+\begin{align*}
+\rho_k=\begin{cases}
+1, \qquad \quad \quad  k=0\\
+\frac{\phi_1}{1- \phi_2}, \quad \quad \quad \quad k=1\\
+\frac{\phi_1^2}{1- \phi_2} + \phi_2, \quad \quad k=2\\
+\phi_1 \rho_{k-1} + \phi_2 \rho_{k-2}, \quad k > 2 
+\end{cases}
+\end{align*}
+
+Here are some examples of AR(2) with their ACFs.  We set $\phi_1=+/-0.3$,$\phi_2=+/-0.5$.
+
+```{r, fig.width=8,fig.height=8}
+n=200000
+ts1=arima.sim(n = n, list(ar = c(0.3, 0.5)), sd = 1)
+ts2=arima.sim(n = n, list(ar = c(0.3,-0.5)), sd = 1)
+ts3=arima.sim(n = n, list(ar = c(-0.3,0.5)), sd = 1)
+ts4=arima.sim(n = n, list(ar = c(-0.3,-0.5)),sd = 1)
+par(mfrow=c(2,2))
+acf(ts1,ylim=c(-1,1),lag.max=25)
+acf(ts2,ylim=c(-1,1),lag.max=25)
+acf(ts3,ylim=c(-1,1),lag.max=25)
+acf(ts4,ylim=c(-1,1),lag.max=25)
+```
+
+**PACF of AR(2)**
+
+Based on the relationship between ACF and PACF, we have
+\begin{align*}
+\phi_{kk}=\begin{cases}
+\frac{\phi_1}{1-\phi_2}, \quad k = 1\\
+\phi_2, \quad k = 2\\
+0, \quad k \geq 3
+\end{cases}
+\end{align*}
+
+Here are some examples of AR(2) with their PACFs.  We set $\phi_1=+/-0.3,+/-0.5$.
+
+```{r, fig.width=8,fig.height=8}
+par(mfrow=c(2,2))
+pacf(ts1,ylim=c(-1,1),lag.max=10)
+pacf(ts2,ylim=c(-1,1),lag.max=10)
+pacf(ts3,ylim=c(-1,1),lag.max=10)
+pacf(ts4,ylim=c(-1,1),lag.max=10)
+```
+
+## AR(p)
+
+AR(p) can be written as any of the following forms.
+
+\begin{align*}
+\phi(B)\tilde{Z}_t&=a_t\\
+(1 - \phi_1 B ... - \phi_p B^p)\tilde{Z}_t&=a_t\\
+\tilde{Z}_t &= \phi_1 \tilde{Z}_{t-1} ... + \phi_p \tilde{Z}_{t-p} + a_t\\
+Z_t-\mu &= \phi_1 (Z_{t-1}-\mu) ... + \phi_p (Z_{t-p}-\mu)  + a_t\\
+Z_t &= c + \phi_1 Z_{t-1} ... +\phi_p Z_{t-p} + a_t\\
+\end{align*}
+where $c=\mu(1-\phi_1 ... - \phi_p)$.
+
+**Yule-Walker Equation**
+
+Suppose we have a stationary AR(p)
+\begin{align*}
+\tilde{Z}_t &= \phi_1 \tilde{Z}_{t-1} ... + \phi_p \tilde{Z}_{t-p} + a_t
+\end{align*}
+Multiply $\tilde{Z}_{t-k}$ on both sides and take expectation.
+\begin{align*}
+\mathbb{E}\tilde{Z}_t \tilde{Z}_{t-k} &= \phi_1 \mathbb{E}\tilde{Z}_{t-1} \tilde{Z}_{t-k} ... + \phi_p \mathbb{E}\tilde{Z}_{t-p}\tilde{Z}_{t-k} + \mathbb{E}a_t\tilde{Z}_{t-k}
+\end{align*}
+Hence we obtain
+\begin{align*}
+\gamma_{k} &= \phi_1 \gamma_{k-1} ... + \phi_p \gamma_{k-p}\\
+\rho_{k} &= \phi_1 \rho_{k-1} ... + \phi_p \rho_{k-p}
+\end{align*}
+Note that $\rho_{k}=\gamma_k/\gamma_0$.
+
+
+Let $k=1,...,p$, we have
+
+\begin{align*}
+\rho_1&= \phi_{1} \rho_{0} + ... + \phi_{p} \rho_{p-1},\\
+\rho_2&= \phi_{1} \rho_{1} + ... + \phi_{p} \rho_{p-2},\\
+&...\\
+\rho_p&= \phi_{1} \rho_{p-1} + ... + \phi_{p} \rho_{0}.
+\end{align*}
+
+Equivalently, we have
+\begin{align*}
+\left[\begin{array}
+{r}
+\rho_1 \\
+\rho_2 \\
+\vdots \\
+\rho_k
+\end{array}\right] = 
+\left[\begin{array}
+{rrrr}
+\rho_{0} & \rho_1 & ... & \rho_{p-1} \\
+\rho_1 & \rho_{0} & ... & \rho_{p-2} \\
+\vdots&\vdots&\ddots&\vdots\\
+\rho_{p-1}&\rho_{p-2}&...&\rho_{0}
+\end{array}\right]
+\left[\begin{array}
+{r}
+\phi_{1} \\
+\phi_{2} \\
+\vdots \\
+\phi_{p}
+\end{array}\right]
+\end{align*}
+
+We can solve the above equation by
+
+\begin{align*}
+\left[\begin{array}
+{r}
+\phi_{1} \\
+\phi_{2} \\
+\vdots \\
+\phi_{p}
+\end{array}\right] = 
+\left[\begin{array}
+{rrrr}
+1 & \rho_1 & ... & \rho_{p-1} \\
+\rho_1 & 1 & ... & \rho_{p-2} \\
+\vdots&\vdots&\ddots&\vdots\\
+\rho_{p-1}&\rho_{p-2}&...&1
+\end{array}\right]^{-1}
+\left[\begin{array}
+{r}
+\rho_1 \\
+\rho_2 \\
+\vdots \\
+\rho_p
+\end{array}\right]
+\end{align*}
+
+This is the connection between $\phi_{1},...,\phi_{p}$ and ACFs, $\rho_1,...,\rho_p$ are given by Yule Walker equation.  We can estimate ACFs by sample ACFs $\hat{\rho}_1,...,\hat{\rho}_p$, and then estimate $\phi_{1},...,\phi_{p}$.
+
+**Variance of AR(p)**
+
+In the Yule-Walker equation, let $k=0$
+\begin{align*}
+\gamma_0 &= \phi_1 \gamma_1 + \phi_2 \gamma_2 + ... + \phi_p \gamma_p + \sigma^2_a\\
+\gamma_0 &= \phi_1 \rho_1 \gamma_0 + \phi_2 \rho_2 \gamma_0 + ... + \phi_p \rho_p \gamma_0 + \sigma^2_a\\
+\gamma_0 &= \frac{\sigma^2_a}{1-\phi_1 \rho_1 - \phi_2 \rho_2 - ... - \phi_p \rho_p}
+\end{align*}
+
+
+**ACF and PACF of AR(p)**
+
+Here are some examples of AR(p) with their ACF and PACF.  We plot the case of AR(3).
+
+```{r, fig.width=8,fig.height=4}
+n=200000
+ts1=arima.sim(n = n, list(ar = c(0.3, 0.5, -0.4)), sd = 1)
+par(mfrow=c(1,2))
+acf(ts1,ylim=c(-1,1),lag.max=10)
+pacf(ts1,ylim=c(-1,1),lag.max=10)
+```
+
+
+# MA models
+## MA(1)
+
+MA(1) can be written as any of the following forms.
+\begin{align*}
+\tilde{Z}_t&=\theta(B)a_t\\
+\tilde{Z}_t&=(1 - \theta_1 B)a_t\\
+\tilde{Z}_t&= a_t - \theta_1 a_{t-1}\\
+Z_t &= \mu + a_t - \theta_1 a_{t-1}
+\end{align*}
+
+**To ensure MA(1) is invertible, we need the root of the polynomial $(1-\theta_1 B)=0$ to be outside of the unit circle.**
+\begin{align*}
+1-\theta_1 B = 0 \Rightarrow B=\frac{1}{\theta_1}
+\end{align*}
+To let the root be outside of the unit circle, we have
+\begin{align*}
+|B|=\Big|\frac{1}{\theta_1}\Big| \Rightarrow |\theta_1|<1
+\end{align*}
+That is, MA(1) is invertible if and only if $|\theta_1|<1$.
+
+**Variance of MA(1)**
+
+$$
+\text{Var}(Z_t) = \text{Var}(a_t - \theta_1 a_{t-1})= \sigma_{a}^2+\theta_1^2 \sigma_{a}^2= (1+\theta_1^2) \sigma_{a}^2
+$$
+
+
+
+**Autocovariance of MA(1)**
+
+$$
+\gamma_1 = \text{Cov}(Z_t,Z_{t+1})= \text{Cov}(a_t - \theta_1 a_{t-1},a_{t+1} - \theta_1 a_{t}) = -\theta_1 \sigma_{a}^2
+$$
+
+$$
+\gamma_2 = \text{Cov}(Z_t,Z_{t+2})= \text{Cov}(a_t - \theta_1 a_{t-1},a_{t+2} - \theta_1 a_{t+1})= 0
+$$
+
+In fact $\gamma_k=0$ for $k \geq 2$.
+
+**ACF of MA(1)**
+
+\begin{align*}
+\rho_{k}=\begin{cases}
+1, \quad k=0\\
+\frac{-\theta_1}{1+\theta_1^2}, \quad k = 1\\
+0, \quad k \geq 2
+\end{cases}
+\end{align*}
+
+
+```{r, fig.width=8,fig.height=4}
+n=200000
+ts1=arima.sim(n = n, list(ma = 0.7),  sd = 1)
+ts2=arima.sim(n = n, list(ma = -0.7), sd = 1)
+par(mfrow=c(1,2))
+acf(ts1,ylim=c(-1,1),lag.max=20)
+acf(ts2,ylim=c(-1,1),lag.max=20)
+```
+
+**PACF of MA(1)**
+
+\begin{align*}
+\phi_{11}=\frac{-\theta_1  (1-\theta_1^2)}{1-\theta_1^4}, \quad
+\phi_{22}=\frac{-\theta_1^2(1-\theta_1^2)}{1-\theta_1^6}, \quad
+\phi_{33}=\frac{-\theta_1^3(1-\theta_1^2)}{1-\theta_1^8}, \quad
+...
+\end{align*}
+
+```{r, fig.width=8,fig.height=4}
+par(mfrow=c(1,2))
+pacf(ts1,ylim=c(-1,1),lag.max=10)
+pacf(ts2,ylim=c(-1,1),lag.max=10)
+```
+
+
+## MA(2)
+
+MA(2) can be written as any of the following forms.
+\begin{align*}
+\tilde{Z}_t&=\theta(B)a_t\\
+\tilde{Z}_t&=(1 - \theta_1 B - \theta_2 B^2)a_t\\
+\tilde{Z}_t&= a_t - \theta_1 a_{t-1} - \theta_2 a_{t-2}\\
+Z_t &= \mu + a_t - \theta_1 a_{t-1} - \theta_2 a_{t-2}
+\end{align*}
+
+**Variance of MA(2)**
+
+\begin{align*}
+\text{Var}(Z_t)=(1+\theta_1^2+\theta_2^2) \sigma^2_a
+\end{align*}
+
+**Autocovariance of MA(2)**
+
+\begin{align*}
+\gamma_1 &= \text{Cov}(Z_t,Z_{t+1})= \text{Cov}(a_t - \theta_1 a_{t-1} - \theta_2 a_{t-2}, a_{t+1} - \theta_1 a_{t} - \theta_2 a_{t-1})\\
+&= (-\theta_1 + \theta_1 \theta_2) \sigma_{a}^2
+\end{align*}
+
+\begin{align*}
+\gamma_2 &= \text{Cov}(Z_t,Z_{t+2})= \text{Cov}(a_t - \theta_1 a_{t-1} - \theta_2 a_{t-2}, a_{t+2} - \theta_1 a_{t+1} - \theta_2 a_{t})\\
+&= - \theta_2 \sigma_{a}^2
+\end{align*}
+
+\begin{align*}
+\gamma_3 &= \text{Cov}(Z_t,Z_{t+3})=0
+\end{align*}
+
+In fact $\gamma_k=0$ for $k \geq 3$.
+
+\begin{align*}
+\gamma_{k}=\begin{cases}
+(-\theta_1+\theta_1 \theta_2) \sigma^2_a, \quad k = 1\\
+- \theta_2 \sigma^2_a, \quad \quad \quad \quad k =2\\
+0,  \quad \quad \quad \quad \quad \quad k \geq 3
+\end{cases}
+\end{align*}
+
+**ACF of MA(2)**
+
+\begin{align*}
+\rho_{k}=\begin{cases}
+1,  \quad \quad k = 0\\
+\frac{-\theta_1+\theta_1 \theta_2}{1+\theta_1^2 + \theta_2^2}, \quad k = 1\\
+\frac{- \theta_2}{1+\theta_1^2 + \theta_2^2}, \quad k =2\\
+0,  \quad \quad \quad \quad k \geq 3
+\end{cases}
+\end{align*}
+
+```{r, fig.width=8,fig.height=8}
+n=200000
+ts1=arima.sim(n = n, list(ma = c(0.3, 0.5)), sd = 1)
+ts2=arima.sim(n = n, list(ma = c(0.3,-0.5)), sd = 1)
+ts3=arima.sim(n = n, list(ma = c(-0.3,0.5)), sd = 1)
+ts4=arima.sim(n = n, list(ma = c(-0.3,-0.5)),sd = 1)
+par(mfrow=c(2,2))
+acf(ts1,ylim=c(-1,1),lag.max=10)
+acf(ts2,ylim=c(-1,1),lag.max=10)
+acf(ts3,ylim=c(-1,1),lag.max=10)
+acf(ts4,ylim=c(-1,1),lag.max=10)
+```
+
+**PACF of MA(2)**
+
+```{r, fig.width=8,fig.height=8}
+par(mfrow=c(2,2))
+pacf(ts1,ylim=c(-1,1),lag.max=20)
+pacf(ts2,ylim=c(-1,1),lag.max=20)
+pacf(ts3,ylim=c(-1,1),lag.max=20)
+pacf(ts4,ylim=c(-1,1),lag.max=20)
+```
+
+## MA(q)
+
+MA(q) can be written as any of the following forms.
+\begin{align*}
+\tilde{Z}_t&=\theta(B)a_t\\
+\tilde{Z}_t&=(1 - \theta_1 B ... - \theta_q B^q)a_t\\
+\tilde{Z}_t&= a_t - \theta_1 a_{t-1} ... - \theta_q a_{t-q}\\
+Z_t &= \mu + a_t - \theta_1 a_{t-1} ... - \theta_q a_{t-q}
+\end{align*}
+
+**ACF and PACF of MA(q)**
+
+Here are some of example of ACF and PACF of MA(q).  We plot the case of MA(3).
+
+```{r, fig.width=8,fig.height=4}
+n=200000
+ts1=arima.sim(n = n, list(ma = c(0.3, 0.5,-0.3)), sd = 1)
+par(mfrow=c(1,2))
+acf(ts1,ylim=c(-1,1),lag.max=20)
+pacf(ts1,ylim=c(-1,1),lag.max=20)
+```
+
+# Summary of ACF and PACF
+
+Model  |  ACF                |  PACF
+-------|---------------------|--------------------
+AR(p)  | exponentially decay | cut off at lag $p$
+MA(q)  | cut off at lag $q$  | exponentially decay 
+ARMA(p,q) | exponentially decay after lag $q$ | exponentially decay
+ARIMA(p,d,q) | slowly decrease | exponentially decay

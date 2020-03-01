@@ -1,0 +1,421 @@
+---
+title: "Forecasting and Time Series Methods Notes 1"
+author: "[Xiaorui Zhu](https://homepages.uc.edu/~zhuxr/) (zhuxr@mail.uc.edu)"
+output: 
+  html_document:
+    code_folding: show
+    fig_caption: yes
+    highlight: tango
+    number_sections: yes
+    theme: readable
+    toc: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+<style type="text/css">
+body{ /* Normal  */
+      font-size: 20px;
+  }
+code.r{ /* Code block */
+    font-size: 16px;
+}
+pre { /* Code block - determines code spacing between lines */
+    font-size: 16px;
+}
+h1 { /* Header 1 */
+  color: DarkBlue;
+}
+h2 { /* Header 2 */
+  color: DarkBlue;
+}
+</style>
+
+
+# Time Series Data and Time Series Model
+
+**Time series data:** observations taken on a variable over a sequence of time points, e.g., daily stock price, daily stock return, GDP by year, hourly blood pressure, hourly temperature.  **Time series data can be considered as one realization (one trajectory) generated from a time series model.**
+
+**Time series model (i.e., stochastic process):** Let $Z_t$ be a sequence of random variables where $t=1,2,3,...,n$ represents its index often considered as time point, then $\{Z_t, t=1,2,...,n\}$ is called a stochastic process.
+
+For example, Let $Z_t$ represent [SQ(Square)](https://finance.yahoo.com/quote/SQ?p=SQ&.tsrc=fin-srch) stock price (daily). [Square](https://g.co/kgs/gGHKbF) is financial services, merchant services aggregator, and mobile payment company. The famous app of this company is [Cash](https://cash.app/app/QPPSXXX).
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(quantmod)
+SQ_daily <- getSymbols("SQ", src = "yahoo", 
+                       from = "2015-01-01",
+                       to = Sys.Date(),
+                       auto.assign = FALSE)
+# summary(SQ_daily)
+library(ggplot2)
+library(dplyr)
+library(plotly)
+library(hrbrthemes)
+
+# Usual area chart
+p <- SQ_daily %>%
+  ggplot(aes(x=Index, y=SQ.Close)) +
+  geom_area(fill="#69b3a2", alpha=0.5) +
+  geom_line(color="#69b3a2") +
+  ylab("Square Inc. Stock price ($)") +
+  ggtitle("Daily stock price of Square Inc.") +
+  theme_ipsum()
+
+# Turn it interactive with ggplotly
+p <- ggplotly(p)
+
+htmltools::div(p, align="center")
+```
+
+Then $Z_1$ represents the 1st day's price, and $Z_2$ represent the 2nd day price, and so on.
+
+The sequence of actual observations from this sequence of random variables are written as $z_1,z_2,...,z_n$. This realization is the time series data.
+
+$$
+\begin{array}
+{ccccc}
+Z_1 & Z_2 & Z_3 & ... & Z_n\\
+\downarrow & \downarrow & \downarrow & \downarrow & \downarrow\\
+z_1 & z_2 & z_3 & ... & z_n
+\end{array}
+$$
+For example, we simulate one trajectory from a time series model ($Z_t=0.8 Z_{t-1}+a_t$, explained later), we observe the following.
+
+```{r}
+n=100
+ts1=arima.sim(n = n, list(ar = 0.8), sd = 1)
+plot.ts(ts1)
+```
+
+Hypothetically, if multiple trajectories are generated from the same time series model, we could observe
+
+```{r}
+ts2=arima.sim(n = n, list(ar = 0.8), sd = 1)
+ts3=arima.sim(n = n, list(ar = 0.8), sd = 1)
+ts4=arima.sim(n = n, list(ar = 0.8), sd = 1)
+ts5=arima.sim(n = n, list(ar = 0.8), sd = 1)
+ts6=arima.sim(n = n, list(ar = 0.8), sd = 1)
+ts.plot(ts1,ts2,ts3,ts4,ts5,ts6,col=c("black",rep("grey",5)))
+```
+
+In real world situations, unfortunately, we only observe one trajectory generated from the time series model.  The goal is to use this one trajectory to infer about the probabilistic behavior of the time series model.
+
+> **Discussion: **
+> 
+> Since we only observe one trajectory, can we truly have probabilistic beharior of the underlying model?
+> 
+> Yes? Reason?
+>
+> No? Reason?
+
+# Probabilistic Behavior of Time Series models
+
+The probabilistic behavior of a time series model essentially means the probabilistic behavior of the vector of random variables $(Z_1,Z_2,Z_3,...Z_n)=\{Z_t\}_{t=1}^{n}$, which is just its joint probability distribution. To specify the probability distribution of $(Z_1,Z_2,Z_3,...Z_n)$, it is often sufficient to specify the probability distribution of some subsets of $(Z_1,Z_2,Z_3,...Z_n)$, for example, $(Z_1,Z_2)$.
+
+For example, the distribution of $Z_1$ is called the 1st order marginal distribution of $Z_1$, $f_{Z_1}(z)$; the joint distribution of $Z_2$ and $Z_3$ is called 2nd order marginal distribution of $Z_2$ and $Z_3$, $f_{Z_2,Z_3}(z_2,z_3)$; so on and so forth. Note that the n-th order marginal distribution, $f_{Z_1,...,Z_n}(z_1,...,z_n)$, essentially captures the entire probabilistic behavior of $(Z_1,Z_2,Z_3,...Z_n)$.
+
+To visualize these distributions, we have simulate 500 trajectories below.  Suppose we want to plot the 1st order marginal distribution of $Z_3$ and the 2nd order marginal distribution, $f_{Z_5,Z_6}(z_5,z_6)$, and the 2nd order marginal distribution, $f_{Z_{10},Z_{17}}(z_{10},z_{17})$. 
+
+```{r, fig.align='center'}
+MC=500
+n=30
+ts_mat=matrix(NA,n,MC)
+for (it in 1:MC)
+{
+  ts_mat[,it]=arima.sim(n = n, list(ar = 0.8), sd = 1)
+}
+ts.plot(ts_mat,col="grey", main = "If the universe can repeats, what we know...")
+abline(v=c(3),col="blue")
+abline(v=c(5,6),col="red")
+abline(v=c(10,17),col="green")
+```
+
+```{r, fig.width=9, fig.height=3}
+par(mfrow=c(1,3))
+hist(ts_mat[3,],xlab="Z_3",ylab="distribution",col="blue",breaks=20,main="dist of Z_3")
+plot(ts_mat[5,],ts_mat[6,],xlab="Z_5",ylab="Z_6",col="red",pch=20,main=paste("corr=",round(cor(ts_mat[5,],ts_mat[6,]),2)))
+plot(ts_mat[10,],ts_mat[17,],xlab="Z_10",ylab="Z_17",col="green",pch=20,main=paste("corr=",round(cor(ts_mat[10,],ts_mat[17,]),2)))
+```
+
+Note that, usually, we assume all the joint distributions are multivariate normal distribution.  If we do not assume normal distributions, it is almost hopeless to identify all the distributions.
+
+> **Answer of the above discussion: **
+> 
+> The probabilistic beharior of the underlying model does not change!
+
+# Stationarity
+
+- **Definition:**  A time series model (stochastic process) is said to be **strictly stationary** if the probability distribution of $Z_{t_1},...,Z_{t_m}$ is the same as the probability distribution of $Z_{t_1+k},...,Z_{t_m+k}$ for all subset $\{t_1,...,t_m\} \subset \{1,...n\}$ and for all $k=1,2,...$.  
+
+For example, $f_{Z_1}(z)=f_{Z_2}(z)=...=f_{Z_n}(z)$,  $f_{Z_1, Z_2}(x,y)=f_{Z_2,Z_3}(x,y)=...=f_{Z_{n-1}.Z_n}(x,y)$
+
+This definition means that stochastic behavior of the time series model is **invariant over the shift in time, $k$.**
+
+- **Implications of strictly stationary:**
+
+(1) $\mathbb{E}Z_t$ is the same for $t=1,2,...,n$ because 
+\begin{align*}
+\mathbb{E}Z_t=\int_{-\infty}^{+\infty} z f_{Z_t}(z)dz=\int_{-\infty}^{+\infty} z f_{Z_{t+k}}(z)dz=\mathbb{E}Z_{t+k}
+\end{align*}
+In other words, you have constant mean.
+
+(2) $\text{Var}[Z_t]$ is the same for $t=1,2,...,n$ because
+\begin{align*}
+\text{Var}[Z_t]=\int_{-\infty}^{+\infty} (z - \mathbb{E}Z_t)^2 f_{Z_t}(z)dz=\int_{-\infty}^{+\infty} (z - \mathbb{E}Z_{t+k})^2 f_{Z_{t+k}}(z)dz=\text{Var}[Z_{t+k}]
+\end{align*}
+
+(3) Covariance matrix of $Z_1,...,Z_n$ is the same as the covariance of $Z_{1+k},...,Z_{n+k}$ for all subsets of $\{1,...,n\}$ and all $k=1,2,3$.
+
+\begin{align*}
+\text{Cov}(Z_1,Z_2,Z_3)&=\left[\begin{array}
+{rrr}
+\text{Var}[Z_1] & \text{Cov}(Z_1,Z_2) & \text{Cov}(Z_1,Z_3) \\
+\text{Cov}(Z_2,Z_1) & \text{Var}[Z_2] & \text{Cov}(Z_2,Z_3) \\
+\text{Cov}(Z_3,Z_1) & \text{Cov}(Z_3,Z_2) & \text{Var}[Z_3]
+\end{array}\right]\\
+&=\left[\begin{array}
+{rrr}
+\text{Var}[Z_7] & \text{Cov}(Z_7,Z_8) & \text{Cov}(Z_7,Z_9) \\
+\text{Cov}(Z_8,Z_7) & \text{Var}[Z_8] & \text{Cov}(Z_8,Z_9) \\
+\text{Cov}(Z_9,Z_7) & \text{Cov}(Z_9,Z_8) & \text{Var}[Z_9]
+\end{array}\right]\\
+&=\text{Cov}(Z_7,Z_8,Z_9)
+\end{align*}
+where $\text{Cov}(Z_1,Z_2) =\text{Cov}(Z_7,Z_8)$ is because
+\begin{align*}
+\text{Cov}(Z_1,Z_2) &=\int_{-\infty}^{+\infty} \int_{-\infty}^{+\infty} (x - \mathbb{E}Z_1)(y - \mathbb{E}Z_2) f_{Z_1,Z_2}(x,y)dxdy \\ &=\int_{-\infty}^{+\infty} \int_{-\infty}^{+\infty} (x - \mathbb{E}Z_7)(y - \mathbb{E}Z_8) f_{Z_7,Z_8}(x,y)dxdy \\ &=\text{Cov}(Z_7,Z_8)
+\end{align*}
+
+
+- **Definition**  A time series model (stochastic process) is said to be **weakly stationary** if it satisfies 1, 2, and 3 mentioned above (i.e., implications).
+
+    - strictly stationary $\Rightarrow$ weakly stationary
+
+    - strictly stationary $\nLeftarrow$ weakly stationary 
+
+    - If all the joint distribution of $Z_1,...,Z_n$ is multivariate normal, then strictly stationary $\Leftrightarrow$ weakly stationary.  It is because multivariate normal assumption with (1), (2), (3) completely specifies all the joint distributions and their properties.
+
+# Some Parameters of Stationary Time Series Models
+
+**Mean** of a stationary time series model:
+\begin{align*}
+\mu = \mathbb{E}Z_t = \int_{-\infty}^{+\infty} z f_{Z_t}(z)dz
+\end{align*} 
+for any $t=1,...,n$.  It is also called the **"level"** of the time series model.
+
+**Variance** of a stationary time series model:
+\begin{align*}
+\sigma^2(Z_t) =\sigma^2_{Z_t}= \text{Var}[Z_t] = \int_{-\infty}^{+\infty} (z - \mathbb{E}Z_t)^2 f_{Z_t}(z)dz
+\end{align*} for any $t=1,...,n$.  It is a measure of fluctuation of time series model around its constant level $\mu$.
+
+For a stationary time series model, we can usually estimate $\mu$ and $\sigma^2$ by sample mean and sample variance.
+
+# Autocovariance and Autocorrelation Function (ACF)
+
+**Definition**  Let $Z_t$ and $Z_{t+k}$ be two random variables belonging to a stationary time series model, separated by **a constant time interval $k$, i.e., lag**.  The autocovariance of $Z_t$ and $Z_{t+k}$ (or the $k$-th order autocovariance) is 
+\begin{align*}
+\gamma_k = \mathbb{E}[(Z_t-\mu)(Z_{t+k}-\mu)]=\int_{-\infty}^{+\infty} \int_{-\infty}^{+\infty} (x - \mathbb{E}Z_t)(y - \mathbb{E}Z_{t+k}) f_{Z_t,Z_{t+k}}(x,y)dxdy
+\end{align*}
+for any $t=1,...,n$.  
+
+Note that $\gamma_k$ does not depend on $t$ for a stationary time series model since $f_{Z_t,Z_{t+k}}(x,y)$ does not depend on $t$ (i.e., stationarity).
+
+Note that $\gamma_0 = \text{Var}[Z_t]$.
+
+**Definition**  For a stationary time series model, autocorrelation of $Z_t$ and $Z_{t+k}$ (or $k$-th order autocorrelation) is $$\rho_k=\frac{\gamma_k}{\gamma_0}$$ for all $t=1,...,n$.  As a function of $k$, $\rho_k$ is called **autocorrelation function (ACF)** and its graph has been called the correlogram.  Note that $\rho_0=1$, $\rho_{k}=\rho_{-k}$.
+
+Importance of $\rho_k$: we can identify a suitable model for a time series data by knowing its autocorrelation function or an estimate of this function (explained later)).
+
+**Estimation of Autocovariance and ACF:**  We can use the sample autocovariance $\hat{\gamma}_k = \frac{1}{n-k}\sum_{i=k+1}^{n} (z_i-\bar{z})(z_{i-k}-\bar{z})$ to estimate the autocovariance $\gamma_k$, then obtain the sample autocorrelation by $\hat{\rho}_k=\frac{\hat{\gamma}_k}{\hat{\gamma}_0}$ as an estimate of the autocorrelation $\rho_k$.
+
+```{r, fig.width=9, fig.height=3}
+n=100
+ts1=arima.sim(n = n, list(ar = 0.8), sd = 1)
+ts.plot(ts1)
+abline(v=seq(1,n),col="red")
+par(mfrow=c(1,4))
+plot(ts1[1:(n-1)],ts1[2:n],pch=20,
+     xlab="Z_{t-1}",ylab="Z_t",
+     xlim=c(min(ts1)-sd(ts1),max(ts1)+sd(ts1)),
+     ylim=c(min(ts1)-sd(ts1),max(ts1)+sd(ts1)),col="red",
+     main=paste("sample corr=",round(cor(ts1[1:(n-1)],ts1[2:n]),3)))
+plot(ts1[1:(n-3)],ts1[4:n],pch=20,
+     xlab="Z_{t-3}",ylab="Z_t",
+     xlim=c(min(ts1)-sd(ts1),max(ts1)+sd(ts1)),
+     ylim=c(min(ts1)-sd(ts1),max(ts1)+sd(ts1)),col="red",
+     main=paste("sample corr=",round(cor(ts1[1:(n-3)],ts1[4:n]),3)))
+plot(ts1[1:(n-10)],ts1[11:n],pch=20,
+     xlab="Z_{t-10}",ylab="Z_t",
+     xlim=c(min(ts1)-sd(ts1),max(ts1)+sd(ts1)),
+     ylim=c(min(ts1)-sd(ts1),max(ts1)+sd(ts1)),col="red",
+     main=paste("sample corr=",round(cor(ts1[1:(n-10)],ts1[11:n]),3)))
+acf(ts1,lag.max=13)
+```
+
+# Partial Autocorrelation Function (PACF)
+**Definition**  Partial correlation is the autocorrelation between $Z_t$ and $Z_{t+k}$ after their dependency on the intervening variables $Z_{t+1},...,Z_{t+k-1}$ has been removed.  In other words, it is the conditional correlation between $Z_t$ and $Z_{t+k}$ conditional on $Z_{t+1},...,Z_{t+k-1}$, that is,
+
+\begin{align*}
+\phi_{kk} = \text{cor}(Z_t,Z_{t+k}|Z_{t+1},...,Z_{t+k-1})
+\end{align*}
+for any $t=1,...,n$.
+
+Note that we usually don't talk about $\phi_{00}$ because it doesn't make sense (what is the correlation between $Z_t$ and $Z_t$ conditional on the random variables between $Z_t$ and $Z_t$?  There is nothing to conditional on.)  Also note that $\phi_{11}=\rho_1$.
+
+**Alternative view on PACF (optional)**
+The PACF can be derived and thought in the following way.
+
+Consider a stationary time series model $\{Z_t\}_{t=1}^n$.  First we make the transformation $\tilde{Z}_t = Z_t - \mu, ... , \tilde{Z}_{t+k} = Z_{t+k} - \mu$.  That means $\tilde{Z}_t,...,\tilde{Z}_{t+k}$ all have zero mean.  Now regression $\tilde{Z}_{t+k}$ on $\tilde{Z}_t,...,\tilde{Z}_{t+k-1}$, that is,
+
+\begin{align*}
+\tilde{Z}_{t+k}=\beta_1 \tilde{Z}_{t+k-1} + ... + \beta_k \tilde{Z}_t + e_{t+k}
+\end{align*}
+
+Then $\beta_k$ is just the partial autocorrelation of $Z_t$ and $Z_{t+k}$, i.e., $\beta_k=\phi_{kk}$.  Rewrite the regression as
+
+\begin{align*}
+\tilde{Z}_{t+k}&=\phi_{k1} \tilde{Z}_{t+k-1} + ... + \phi_{kk} \tilde{Z}_t + e_{t+k}\\
+\mathbb{E}\tilde{Z}_{t+k}\tilde{Z}_{t+k-j}&=\phi_{k1} \mathbb{E}\tilde{Z}_{t+k-1}\tilde{Z}_{t+k-j} + ... + \phi_{kk} \mathbb{E}\tilde{Z}_t\tilde{Z}_{t+k-j} + \mathbb{E}e_{t+k}\tilde{Z}_{t+k-j}\\
+\gamma_j&= \phi_{k1} \gamma_{j-1} + ... + \phi_{kk} \gamma_{j-k}\\
+\rho_j&= \phi_{k1} \rho_{j-1} + ... + \phi_{kk} \rho_{j-k}.
+\end{align*}
+
+Let $j=1,...,k$, we have
+
+\begin{align*}
+\rho_1&= \phi_{k1} \rho_{0} + ... + \phi_{kk} \rho_{k-1}\\
+\rho_2&= \phi_{k1} \rho_{1} + ... + \phi_{kk} \rho_{k-2}\\
+&...\\
+\rho_k&= \phi_{k1} \rho_{k-1} + ... + \phi_{kk} \rho_{0}.
+\end{align*}
+
+Equivalently, we have
+\begin{align*}
+\left[\begin{array}
+{r}
+\rho_1 \\
+\rho_2 \\
+\vdots \\
+\rho_k
+\end{array}\right] = 
+\left[\begin{array}
+{rrrr}
+1 & \rho_1 & ... & \rho_{k-1} \\
+\rho_1 & 1 & ... & \rho_{k-2} \\
+\vdots&\vdots&\ddots&\vdots\\
+\rho_{k-1}&\rho_{k-2}&...&1
+\end{array}\right]
+\left[\begin{array}
+{r}
+\phi_{k1} \\
+\phi_{k2} \\
+\vdots \\
+\phi_{kk}
+\end{array}\right]
+\end{align*}
+
+We can solve the above equation by
+
+\begin{align*}
+\left[\begin{array}
+{r}
+\phi_{k1} \\
+\phi_{k2} \\
+\vdots \\
+\phi_{kk}
+\end{array}\right] = 
+\left[\begin{array}
+{rrrr}
+1 & \rho_1 & ... & \rho_{k-1} \\
+\rho_1 & 1 & ... & \rho_{k-2} \\
+\vdots&\vdots&\ddots&\vdots\\
+\rho_{k-1}&\rho_{k-2}&...&1
+\end{array}\right]^{-1}
+\left[\begin{array}
+{r}
+\rho_1 \\
+\rho_2 \\
+\vdots \\
+\rho_k
+\end{array}\right]
+\end{align*}
+
+This is the connection between PACF and ACF.
+
+**Estimation of PACF:**  We can use the relationship between ACF and PACF (derived in the formula above) to estimate PACF by plugging in $\hat{\rho}_k$ to obtain $\hat{\phi}_{kk}$.
+
+
+# White Noise
+
+**Definition**  A time series model is called white noise if it is a sequence of uncorrelated random variables from a fixed distribution with constant zero mean $\mathbb{E}[a_t]=0$, constant variance $\text{Var}[a_t]=\sigma^2_{a_t}$, autocovariance $\gamma_k = \text{cov}(a_t,a_{t+k})=0$ for any $k=1,2,...$.  A white noise is usually denoted as $\{a_t\}_{t=1}^n$.
+
+The white noise is an important component in time series models because it is a building block for more complex models.
+
+For a white noise $\{a_t\}_{t=1}^n$.
+
+**ACF:**
+\begin{align*}
+\rho_k= \begin{cases}
+1, k=0\\
+0, k\neq 0
+\end{cases}
+\end{align*}
+
+**PACF:**
+\begin{align*}
+\phi_{kk}= \begin{cases}
+1, k=0\\
+0, k\neq 0
+\end{cases}
+\end{align*}
+
+In this course, we assume $\{a_t\}$ follows normal distributions.  Below is an example of white noise and its sample ACF and PACF.
+
+```{r, fig.width=8, fig.height=4}
+n=2000
+ts1=arima.sim(n = n, list(order=c(0,0,0)), sd = 1)
+plot.ts(ts1)
+```
+
+```{r, fig.width=8, fig.height=4}
+par(mfrow=c(1,2))
+acf(ts1,ylim=c(-1,1))
+pacf(ts1,ylim=c(-1,1))
+```
+
+# Operators for Time Series Models
+
+**Backshift operator, $B$**
+
+\begin{align*}
+BZ_t&=Z_{t-1}\\
+B^2Z_t&=B(BZ_t)= BZ_{t-1}=Z_{t-1}=Z_{t-2}\\
+B^kZ_t&=Z_{t-k}
+\end{align*}
+
+**Forwardshift operator, $F=B^{-1}$**
+\begin{align*}
+FZ_t&=Z_{t+1}\\
+FBZ_t&=F(BZ_t)= FZ_{t-1}=Z_{t}\\
+F^kZ_t&=Z_{t+k}
+\end{align*}
+
+In addition, we have $Ba_t=a_{t-1}$ and $Fa_t=a_{t+1}$.
+
+**Difference operator, $\nabla=1-B$**
+\begin{align*}
+\nabla Z_t&=(1-B)Z_t=Z_t - BZ_t=Z_t - Z_{t-1}\\
+\nabla^2 Z_t&=\nabla (\nabla Z_t)= (1-B)(Z_t - Z_{t-1}) = (Z_t - Z_{t-1}) - (Z_{t-1}-Z_{t-2}) =Z_t - 2 Z_{t-1} + Z_{t-2} \\
+\end{align*}
+
+Note that $\nabla^2=(1-B)^2=1-2B+B^2$
+
+**Inverse of difference operator, $S=\nabla^{-1}$**
+\begin{align*}
+S Z_t&=\sum_{j=0}^{\infty}Z_{t-j}=Z_t + Z_{t-1} + ...\\
+S \nabla Z_t&=S (Z_t - Z_{t-1}) = \sum_{j=0}^{\infty}Z_{t-j} - \sum_{j=0}^{\infty}Z_{t-1-j} =Z_t\\
+\end{align*}
+
+Note that
+$$\nabla^{-1}=(1-B)^{-1}=1+B+B^2+...=\frac{1-B^{-\infty}}{1-B}=\frac{1}{1-B}$$
+where $1+B+B^2+...$ is a geometric series.

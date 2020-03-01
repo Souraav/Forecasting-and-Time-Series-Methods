@@ -1,0 +1,570 @@
+---
+title: "Forecasting and Time Series Methods Notes 5"
+author: "[Xiaorui Zhu](https://homepages.uc.edu/~zhuxr/) (zhuxr@mail.uc.edu)"
+output: 
+  html_document:
+    code_folding: show
+    fig_caption: yes
+    highlight: tango
+    number_sections: yes
+    theme: readable
+    toc: yes
+editor_options: 
+  chunk_output_type: console
+---
+<style type="text/css">
+body{ /* Normal  */
+      font-size: 20px;
+  }
+code.r{ /* Code block */
+    font-size: 16px;
+}
+pre { /* Code block - determines code spacing between lines */
+    font-size: 16px;
+}
+h1 { /* Header 1 */
+  color: DarkBlue;
+}
+h2 { /* Header 2 */
+  color: DarkBlue;
+}
+h3 { /* Header 3 */
+  color: DarkBlue;
+}
+</style>
+
+R packages:
+```{r, warning=FALSE,message=FALSE, results = 'hide'}
+# Install necessary packages
+list_packages <- c("forecast", "readxl", "stargazer", "fpp", 
+                   "fpp2", "scales", "quantmod", "urca",
+                   "vars", "tseries", "ggplot2", "dplyr")
+new_packages <- list_packages[!(list_packages %in% installed.packages()[,"Package"])]
+if(length(new_packages)) install.packages(new_packages)
+
+# Load necessary packages
+lapply(list_packages, require, character.only = TRUE)
+```
+
+
+Model  |  ACF, $\rho_k$      |  PACF, $\phi_{kk}$
+-------|---------------------|--------------------
+AR(p)  | exponentially decay | cut off at lag $p$
+MA(q)  | cut off at lag $q$  | exponentially decay 
+ARMA(p,q) | exponentially decay after lag $q$ | exponentially decay
+ARIMA(p,d,q) | slowly decrease | exponentially decay
+
+# Identification for Nonstationary Models
+
+
+To identify the nonstationarity, you can
+
+- plot the time series, look for changes in mean or variance.
+- look at the ACF to see if the ACF decreases slowly.
+- look at the parameter estimate, see if the estimated parameters are outside of stationarity region, e.g., $|\phi_1|<1$ for AR(1).
+- The last two points are a little arbitrary, so we use **augmented Dickey-Fuller test (ADF)**.
+ 
+Null hypothesis, $H_0$: There is a unit root, i.e., homogeneous nonstationarity.
+
+Alternative hypothesis, $H_1$: There is no unit root, i.e., stationarity.
+
+Therefore, small p-value indicates stationarity and large p-value indicates homogeneous nonstationarity, i.e., there is a unit root.
+
+The test statistic has a special distribution that's not commonly seen, so it make more sense to just look at the p-value.
+
+
+Case 1:
+```{r, fig.width=9,fig.height=3}
+case1=as.ts(scan("case1.txt"))
+par(mfrow=c(1,3))
+plot(case1)
+acf(case1)
+pacf(case1)
+adf.test(case1)
+```
+
+
+# Nonstationarity Tests and Their Basic Ideas
+
+Let's start with Dickey-Fuller test.
+
+## Dickey-Fuller Test
+
+To illustrate Dickey-Fuller test, let's take AR(1) as an example, we have
+
+$$
+Z_t - \mu = \phi_1 (Z_{t-1} - \mu) + a_t\\
+Z_t=C + \phi_1 Z_{t-1} + a_t
+$$
+where $C=(1-\phi_1)\mu$.  Sometimes, we allow the mean of the time series to be a linear function in time, that is,
+
+$$
+Z_t=C + \beta t + \phi_1 Z_{t-1} + a_t \\
+Z_t - \frac{C + \beta t}{1-\phi_1} = \phi_1 \left(Z_{t-1} - \frac{C + \beta t}{1-\phi_1} \right) + a_t
+$$
+
+Below is an example of the AR(1) for $C=0$ vs $C \neq 0$, $\beta=0$ vs $\beta \neq 0$, and $\phi_1=1$ vs $\phi_1 < 1$.
+
+```{r, fig.width=8,fig.height=10}
+par(mfrow=c(3,2))
+N <- 500
+a <- 1
+l <- 0.01
+rho <- 0.7
+
+set.seed(123)
+v <- ts(rnorm(N,0,1))
+
+y <- ts(rep(0,N))
+for (t in 2:N){
+  y[t]<- rho*y[t-1]+v[t]
+}
+plot(y,type='l', ylab="phi*Z[t-1] + a[t]")
+abline(h=0)
+
+y <- ts(rep(0,N))
+for (t in 2:N){
+  y[t]<- y[t-1]+v[t]
+}
+plot(y,type='l', ylab="Z[t-1] + a[t]")
+abline(h=0)
+
+y <- ts(rep(0,N))
+for (t in 2:N){
+  y[t]<- a+rho*y[t-1]+v[t]
+}
+plot(y,type='l', ylab="C + phi*Z[t-1]+a[t]")
+abline(h=0)
+
+a <- 0.1
+y <- ts(rep(0,N))
+for (t in 2:N){
+  y[t]<- a+y[t-1]+v[t]
+}
+plot(y,type='l', ylab="C + Z[t-1] + a[t]")
+abline(h=0)
+
+y <- ts(rep(0,N))
+for (t in 2:N){
+  y[t]<- a+l*time(y)[t]+rho*y[t-1]+v[t]
+}
+plot(y,type='l', ylab="C + beta*t + phi*Z[t-1] + a[t]")
+abline(h=0)
+
+y <- ts(rep(0,N))
+for (t in 2:N){
+  y[t]<- a+l*time(y)[t]+y[t-1]+v[t]
+}
+plot(y,type='l', ylab="C + beta*t + Z[t-1] + a[t]")
+abline(h=0)
+```
+
+
+With a little algebra, it becomes
+
+
+$$
+Z_t = C + \beta t + \phi_1 Z_{t-1} + a_t \\
+Z_t - Z_{t-1} = C + \beta t + (\phi_1 - 1) Z_{t-1} + a_t\\
+\nabla Z_t  = C + \beta t + \gamma Z_{t-1} + a_t
+$$
+
+If $\gamma=0$, then we have a random walk process. If not and $-1<\gamma+1<1$, then we have a stationary process.
+
+
+## Augmented Dickey-Fuller Test
+
+The Augmented Dickey-Fuller test allows for higher-order autoregressive processes.  Let's take AR(2) as an example.
+
+$$
+Z_t = C + \beta t + \phi_1 Z_{t-1} + \phi_2 Z_{t-2} + a_t \\
+Z_t - Z_{t-1} = C + \beta t + (\phi_1 + \phi_2 - 1) Z_{t-1} - \phi_2 (Z_{t-1} - Z_{t-2}) + a_t\\
+\nabla Z_t  = C + \beta t + \gamma Z_{t-1}   - \phi_2 \nabla Z_{t-1} + a_t
+$$
+where $\gamma=(\phi_1 + ... + \phi_p - 1)$.
+
+If this AR(2) is homogeneous nonstationary (i.e., has a unit root), then root of the AR polynomial $1-\phi_1 B - \phi_2 B^2=0$ has a unit root $B=1$.  If we plug in $B=1$ in $1-\phi_1 B - \phi_2 B^2=0$, we have $1-\phi_1 1 - \phi_2 1^2=1-\phi_1 - \phi_2 =0$. So testing the unit root is equivalent to test the regression coefficient $\gamma=0$ or not. Therefore, we can simply run regress $\nabla Z_t$ on $Z_{t-1}$, $\nabla Z_{t-1}$, $t$ and intercept.  Then test $\gamma=0$ using $t=\hat{\gamma}/SE(\hat{\gamma})$.
+
+However, $t=\hat{\gamma}/SE(\hat{\gamma})$ from the regression does not follow a t distribution. Dickey an Fuller develop the distribution of $t=\hat{\gamma}/SE(\hat{\gamma})$ in their 1979 and 1981 paper.
+
+However, note that this is a one tail test.  We reject the null hypothesis when $\hat{\gamma}$ is small or negative, because $\gamma > 0$ implies $1-\phi_1 - \phi_2 < 0$ which is stationarity.
+
+
+If $t=\hat{\gamma}/SE(\hat{\gamma}) < -2.86$, then reject $H_0$, which implies stationarity.  Or we can look at the p-value from the output.
+
+To be effective in ADF test, the test requires that the AR part of the model be correctly specified.
+
+It can be proved that if all roots of $1-\phi_1 B - \phi_2 B^2=0$ are beyond 1 in absolute value, then 
+
+$$
+\phi_1+\phi_2<1\\
+\phi_2-\phi_1<1\\
+-1<\phi_2<1
+$$
+
+which is equivalent to 
+
+$$
+1 - \phi_1 - \phi_2 >0\\
+1 + \phi_1 - \phi_2 >0\\
+-1<\phi_2<1
+$$
+
+In other words, the pair $(\phi_1, \phi_2)$ has to be inside of the triangle below in order to have stationary AR(2).
+```{r,fig.width=4,fig.height=4}
+plot(0,0,type="n",xlab="phi_1",ylab="phi_2",xlim=c(-3,3),ylim=c(-2,2))
+abline(h=0,col="grey")
+abline(v=0,col="grey")
+lines(c(0,2),c(1,-1))
+lines(c(0,-2),c(1,-1))
+lines(c(-2,2),c(-1,-1))
+```
+
+The approximate 5\% left tail critical value is -2.86.
+
+Three cases are considered
+
+- No mean in the model, i.e., $\mu=0$.
+
+- A constant mean in the model, i.e., $\mu \neq 0$.
+
+- A linear trend in the model, i.e., $\mu = a + b t$.
+
+case 1 above may be reasonable if you have already differenced your original time series data.  i.e., $Z_t - Z_{t-1}$ usually has a zero mean if $Z_t$, $Z_{t-1}$ have the same constant mean.
+
+But if the original time series data had a deterministic trend $\alpha + \beta t$, then differencing induces a constant mean.
+
+
+
+
+# Examples of Nonstationarity Tests
+
+The `adf.test()` from the `tseries` package will do an Augmented  Dickey-Fuller test (or Dickey-Fuller if we set lags equal to 0) with a trend $\beta t$ and an intercept $C$.
+
+The `ur.df()` in the `urca` package also conducts an Augmented Dickey-Fuller test and gives us a bit more information and control over the test. The `ur.df()` function allows us to specify whether to test stationarity around a zero-mean with no trend ($C=0$ and $\beta=0$), around a non-zero mean with no trend ($C \neq 0$ and $\beta=0$), or around a trend with an intercept ($C \neq 0$ and $\beta \neq 0$). This can be useful when we know that our data have no trend, for example if you have removed the trend already. `ur.df()` allows us to specify the lags or select them using model selection.  If `type` is set to `"none"` neither an intercept nor a trend is included in the test regression. If it is set to `"drift"` an intercept is added and if it is set to `"trend"` both an intercept and a trend is added. For this test, the more negative the test statistic is, the stronger the rejection of the hypothesis that there is a unit root at some level of confidence.
+
+The `ur.kpss()` function from the `urca` package performs the Kwiatkowski-Phillips-Schmidt-Shin (KPSS) test, which is similar to ADF test.  In the KPSS test, the null hypothesis is that the data are stationary, and we look for evidence that the null hypothesis is false.  Small p-values (e.g., less than 0.05) suggest that differencing is required.
+
+**Case 5: rail freight**
+```{r, fig.width=9,fig.height=3}
+case5=as.ts(scan("case5.txt"))
+par(mfrow=c(1,3))
+plot(case5)
+acf(case5)
+pacf(case5)
+adf.test(case5,k=1)
+adf.test(case5,k=2)
+adf.test(case5,k=3)
+```
+
+The ADF test suggest not reject the null hypothesis, that is, the time series is nonstationary.
+
+```{r}
+test=ur.df(case5, type = "trend", lags = 3)
+summary(test)
+```
+
+We only look at the first of the three statistics.  The other two are dealing with uncertainty about including the intercept and deterministic time trend terms in the test equation.
+
+The ADF test above suggests that we cannot reject the null hypothesis and conclude the time series data is nonstationary.
+
+```{r}
+test=ur.df(case5, type = "drift", lags = 3)
+summary(test)
+```
+
+We only look at the first of the two statistics.  The other is dealing with uncertainty about including the intercept term in the test equation.
+
+```{r}
+test=ur.df(case5, type = "none", lags = 3)
+summary(test)
+```
+
+There is only one test statistic.
+
+```{r}
+test=ur.kpss(case5)
+summary(test)
+```
+
+The KPSS test above suggests that we can reject the null hypothesis ($H_0$: stationary) and conclude the time series data is nonstationary.
+
+
+**Case IMA: refreigerator**
+```{r, fig.width=9,fig.height=3}
+d=scan("case_refrigerator.txt")
+case_ref=as.ts(d[seq(2,length(d),2)])
+par(mfrow=c(1,3))
+plot(case_ref)
+acf(case_ref)
+pacf(case_ref)
+adf.test(case_ref)
+test=ur.df(case_ref, type = "trend", lags = 3)
+summary(test)
+test=ur.kpss(case_ref)
+summary(test)
+```
+
+# ARIMA Models Equivalence
+
+An ARIMA model can be written as
+
+$$
+(1-\phi_1 B - ... - \phi_p B^p) (1-B)^d Z_t = C + (1-\theta_1 B - ... - \theta_q B^q) a_t
+$$
+
+which is equivalent to 
+
+$$
+(1-\phi_1 B - ... - \phi_p B^p) (1-B)^d \left(Z_t - \frac{\mu t^d}{d!}\right) = (1-\theta_1 B - ... - \theta_q B^q) a_t
+$$
+
+where $C= \mu (1-\phi_1...-\phi_p)$ and $\mu$ is the mean of $(1-B)^d Z_t$. R uses the second notation. Note that $(1-B)^d \left(Z_t - \frac{\mu t^d}{d!}\right)$ has a mean of zero.
+
+The inclusion of a constant in a non-stationary ARIMA model is equivalent to inducing a polynomial trend of order $d$ in the forecast function. (If the constant is omitted, the forecast function includes a polynomial trend of order  $d-1$.) When  $d=0$, we have the special case that  $\mu$ is the mean of $Z_t$.
+
+If $C=\mu(1-\phi_1...-\phi_p)=0$ and $d=0$, the long-term forecasts will go to zero.
+
+If $C=\mu(1-\phi_1...-\phi_p)=0$ and $d=1$, the long-term forecasts will go to a non-zero constant.
+
+If $C=\mu(1-\phi_1...-\phi_p)=0$ and $d=2$, the long-term forecasts will follow a straight line.
+
+If $C=\mu(1-\phi_1...-\phi_p) \neq 0$ and $d=0$, the long-term forecasts will go to the mean of the data.
+
+If $C=\mu(1-\phi_1...-\phi_p) \neq 0$ and $d=1$, the long-term forecasts will follow a straight line.
+
+If $C=\mu(1-\phi_1...-\phi_p) \neq 0$ and $d=2$, the long-term forecasts will follow a quadratic trend.
+
+
+Occasionally, people may use 
+
+$$
+(1-\phi_1 B - ... - \phi_p B^p) (1-B)^d Z_t = C + \beta t + (1-\theta_1 B - ... - \theta_q B^q) a_t
+$$
+
+which is equivalent to 
+
+$$
+(1-\phi_1 B - ... - \phi_p B^p) (1-B)^d \left(Z_t - \frac{\mu_1 t^d}{d!} - \frac{\mu_2 t^{d+1}}{(d+1)!}\right) = (1-\theta_1 B - ... - \theta_q B^q) a_t
+$$
+
+where $C = \mu_1 (1-\phi_1...-\phi_p)$ and $\beta = \mu_2 (1-\phi_1...-\phi_p)$.
+
+Below is the simulation study showing the patterns of the time series data showing the case of $C =0, C \neq 0$, $\beta \neq 0$, $\beta = 0$ (rows), $d=0,1,2$ (columns)
+
+```{r,fig.width=9,fig.height=9}
+par(mfrow=c(3,3))
+set.seed(123)
+n <- 500
+C <- 0
+phi <- 0.7
+a <- ts(rnorm(n,0,1))
+Z <- ts(rep(0,n))
+for (t in 2:n){
+  Z[t]<- C + phi * Z[t-1] + a[t]
+}
+plot(Z)
+plot(cumsum(Z),type="l")
+plot(cumsum(cumsum(Z)),type="l")
+
+
+C <- 0.1
+Z <- ts(rep(0,n))
+for (t in 2:n){
+  Z[t]<- C + phi * Z[t-1] + a[t]
+}
+plot(Z)
+plot(cumsum(Z),type="l")
+plot(cumsum(cumsum(Z)),type="l")
+
+
+C <- 0.1
+beta <- 0.01
+Z <- ts(rep(0,n))
+for (t in 2:n){
+  Z[t]<- C + beta * t + phi * Z[t-1] + a[t]
+}
+plot(Z)
+plot(cumsum(Z),type="l")
+plot(cumsum(cumsum(Z)),type="l")
+
+```
+
+# Example of ARIMA Identification
+
+**Real Data Example:** Here we analyze the seasonally adjusted electrical equipment orders data.
+
+Here is the data
+
+```{r}
+data("elecequip")
+elecequip
+```
+
+We first remove the seasonality and visualize the data.
+
+```{r}
+elecequip %>% stl(s.window='periodic') %>% seasadj() -> eeadj
+autoplot(eeadj)
+```
+
+We further perform ADF test to determine the stationarity.  However, it is easy to see that it is not stationary.
+```{r}
+adf.test(eeadj)
+test=ur.df(eeadj,type = "trend",lags = 5)
+summary(test)
+test=ur.df(eeadj,type = "drift",lags = 5)
+summary(test)
+test=ur.df(eeadj,type = "none",lags = 5)
+summary(test)
+test=ur.kpss(eeadj)
+summary(test)
+```
+
+The results are consistent with our judgement.  Therefore, we take the 1st order difference and check again
+
+```{r}
+eeadj %>% diff() %>% adf.test()
+```
+
+The differenced series is stationary.  We plot its ACF and PACF.
+
+```{r}
+eeadj %>% diff() %>% ggtsdisplay(main="")
+```
+
+The PACF is suggestive of an AR(3) model. So an initial candidate model is an ARIMA(3,1,0). There are no other obvious candidate models.
+
+We fit an ARIMA(3,1,0) model along with variations including ARIMA(4,1,0), ARIMA(2,1,0), ARIMA(3,1,1), etc. 
+
+
+```{r}
+(fit <- Arima(eeadj, order=c(3,1,0)))
+checkresiduals(fit)
+(fit <- Arima(eeadj, order=c(3,1,1)))
+checkresiduals(fit)
+```
+
+Of these models, the ARIMA(3,1,1) has a slightly smaller AICc value.
+
+Note that the AIC corrected for small sample bias (AICc) is defined as
+
+$$
+AICc=AIC+\frac{k(k+1)}{n-k-1}.
+$$
+
+The ACF plot of the residuals from the ARIMA(3,1,1) model shows that all autocorrelations are within the threshold limits, indicating that the residuals are behaving like white noise. A portmanteau test returns a large p-value, also suggesting that the residuals are white noise.
+
+Forecasts from the chosen model and check the unit root.
+
+```{r}
+autoplot(fit)
+autoplot(forecast(fit))
+```
+
+If we instead use `auto.arima`, we have similar results.
+
+```{r}
+(fit <- auto.arima(eeadj))
+```
+
+
+
+**Simulation Example**
+
+We present the following simulation example to show the usage of `Arima` function.
+
+We first simulate $Z_t$ according to AR(1) with $C=0.3$ and $\beta=0$. And let $(1-B)Y_t = Z_t$ and $(1-B)X_t = Y_t$.
+
+```{r, fig.width=9,fig.height=6}
+n <- 5000
+C <- 0.3
+phi <- 0.7
+
+set.seed(246810)
+a <- ts(rnorm(n,0,1))
+Z <- ts(rep(0,n))
+for (t in 2:n){
+  Z[t]<- C + phi * Z[t-1] + a[t]
+}
+Y=cumsum(Z)
+X=cumsum(cumsum(Z))
+par(mfrow=c(2,3))
+plot(Z,type = "l")
+plot(Y,type = "l")
+plot(X,type = "l")
+plot(Z[10:(n/100)],type = "l")
+plot(Y[10:(n/100)],type = "l")
+plot(X[10:(n/100)],type = "l")
+```
+
+We fit the simulated series using `Arima` with the `include.constant` setting to TRUE or FALSE.
+
+```{r}
+(fit <- Arima(Z, order=c(1,0,0), 
+              #include.mean = TRUE, include.drift = TRUE, 
+              include.constant = TRUE))
+autoplot(forecast(fit, h=2000))
+
+(fit <- Arima(Z, order=c(1,0,0), 
+              #include.mean = TRUE, include.drift = TRUE, 
+              include.constant = FALSE))
+autoplot(forecast(fit, h=2000))
+
+
+(fit <- Arima(Y, order=c(1,1,0), 
+              #include.mean = TRUE, include.drift = TRUE, 
+              include.constant = TRUE))
+autoplot(forecast(fit, h=2000))
+
+(fit <- Arima(Y, order=c(1,1,0), 
+              #include.mean = TRUE, include.drift = TRUE, 
+              include.constant = FALSE))
+autoplot(forecast(fit, h=2000))
+
+(fit <- Arima(X, order=c(1,2,0), 
+              #include.mean = TRUE, include.drift = TRUE, 
+              include.constant = TRUE))
+autoplot(forecast(fit, h=2000))
+```
+
+By default, the `Arima()` function sets $C=\mu=0$ when $d>0$ and provides an estimate of $\mu$  when $d=0$. It will be close to the sample mean of the time series, but usually not identical to it as the sample mean is not the maximum likelihood estimate when $p+q>0$.
+
+The argument `include.mean` only has an effect when $d=0$ and is `TRUE` by default. Setting `include.mean=FALSE` will force $\mu=C=0$. The argument `include.drift` allows $\mu \neq 0$  when $d=1$. 
+
+For $d>1$, no constant is allowed as a quadratic or higher order trend is particularly dangerouswhen forecasting. The parameter $\mu$ is called the "drift" in the R output when  $d=1$. 
+
+There is also an argument `include.constant` which, if `TRUE`, will set `include.mean=TRUE` if $d=0$ and `include.drift=TRUE` when $d=1$. If `include.constant=FALSE`, both `include.mean` and `include.drift` will be set to `FALSE`. If `include.constant` is used, the values of `include.mean=TRUE` and `include.drift=TRUE` are ignored. 
+
+Note that default function `arima()` is less flexible in this regard.  It has only `include.mean` option.  And it doesn't allow $\mu \neq 0$ for $d \ geq 1$. In other words, the default value of `include.mean` is `TRUE` for undifferenced series, and it is ignored for ARIMA models with differencing.
+
+```{r}
+arima(Z, order=c(1,0,0),include.mean = TRUE)
+arima(Y, order=c(1,1,0),include.mean = TRUE)
+arima(Y, order=c(1,1,0))
+arima(X, order=c(1,2,0),include.mean = TRUE)
+```
+
+
+# ARIMA Modeling Procedure
+
+When fitting an ARIMA model to a set of time series data, the following procedure provides a useful general approach.
+
+1. Plot the data and identify any unusual observations.
+
+2. If necessary, transform the data (using a Box-Cox transformation) to stabilise the variance (introduced later).
+
+3. If the data are non-stationary, take first differences of the data until the data are stationary.  Use ADF test to determine if the series is stationary.
+
+4. Examine the ACF/PACF: Is an ARIMA(p,d,0) or ARIMA(0,d,q) model appropriate?  With an intercept or not?
+
+5. Try your chosen model(s), and use the AIC to search for a better model.
+
+6. Check the residuals from your chosen model by plotting the ACF of the residuals, and doing a portmanteau test of the residuals. If they do not look like white noise, try a modified model (steps 3, 4 and 5).
+
+7. Once the residuals look like white noise, calculate forecasts.
+
+Note that `auto.arima` only takes care of steps 3, 4, and 5.
+
+
+**The art of a time series analyst's model identification is very much like the method of an FBI agent's criminal search.  Most criminals disguise themselves to avoid being recognized.**

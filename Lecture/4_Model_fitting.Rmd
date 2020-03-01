@@ -1,0 +1,775 @@
+---
+title: "Forecasting and Time Series Methods Notes 4"
+author: "[Xiaorui Zhu](https://homepages.uc.edu/~zhuxr/) (zhuxr@mail.uc.edu)"
+output: 
+  html_document:
+    code_folding: show
+    fig_caption: yes
+    highlight: tango
+    number_sections: yes
+    theme: readable
+    toc: yes
+editor_options: 
+  chunk_output_type: console
+---
+<style type="text/css">
+body{ /* Normal  */
+      font-size: 20px;
+  }
+code.r{ /* Code block */
+    font-size: 16px;
+}
+pre { /* Code block - determines code spacing between lines */
+    font-size: 16px;
+}
+h1 { /* Header 1 */
+  color: DarkBlue;
+}
+h2 { /* Header 2 */
+  color: DarkBlue;
+}
+h3 { /* Header 3 */
+  color: DarkBlue;
+}
+</style>
+
+We require the following R packages.
+
+```{r, warning=FALSE,message=FALSE, results = 'hide'}
+# Install necessary packages
+list_packages <- c("forecast", "readxl", "stargazer", "fpp", 
+                   "fpp2", "scales", "quantmod", "urca",
+                   "vars", "tseries", "ggplot2", "dplyr")
+new_packages <- list_packages[!(list_packages %in% installed.packages()[,"Package"])]
+if(length(new_packages)) install.packages(new_packages)
+
+# Load necessary packages
+lapply(list_packages, require, character.only = TRUE)
+```
+
+# Model Identification
+
+Given time series data, we need to identify the form of the model first, i.e., AR, MA, ARMA, or ARIMA?  The order (p,d,q)?
+
+The main tool is sample ACF $\hat{\rho}_k$ and sample PACF $\hat{\phi}_{kk}$.
+
+Model  |  ACF, $\rho_k$      |  PACF, $\phi_{kk}$
+-------|---------------------|--------------------
+AR(p)  | exponentially decay | cut off at lag $p$
+MA(q)  | cut off at lag $q$  | exponentially decay 
+ARMA(p,q) | exponentially decay after lag $q$ | exponentially decay
+ARIMA(p,d,q) | slowly decrease | exponentially decay
+
+Model identification requires a good understanding the process AR, MA, ARMA, ARIMA, for example, their ACFs and PACFs.
+
+In practice, these ACF and PACF are unknown.  For given time series data, ACF and PACF have to be estimated. 
+
+In model identification, our goal is to match patterns in the sample ACF and PACF with the known patterns of ACF and PACF of a specific model.
+
+To get sample ACF and PACF, we use: 
+
+In R, we use
+```{r, tidy=FALSE, eval=FALSE, highlight=FALSE}
+acf()
+pacf()
+```
+
+
+In SAS, we use
+```{r, tidy=FALSE, eval=FALSE, highlight=FALSE }
+IDENTIFY VAR=Z NLAG =50
+```
+
+**Examples**
+
+Simulated data:
+```{r, fig.width=9,fig.height=3}
+n=200
+ts1=arima.sim(n = n, list(order = c(1,0,0), ar = c(0.5)), sd = 1)
+par(mfrow=c(1,3))
+plot.ts(ts1)
+acf(ts1,ylim=c(-1,1),lag.max=10)
+pacf(ts1,ylim=c(-1,1),lag.max=10)
+n=20000
+ts1=arima.sim(n = n, list(order = c(1,0,0), ar = c(0.5)), sd = 1)
+par(mfrow=c(1,3))
+plot.ts(ts1)
+acf(ts1,ylim=c(-1,1),lag.max=10)
+pacf(ts1,ylim=c(-1,1),lag.max=10)
+```
+
+# Cases
+
+**Case 1: Business Inventories** We analyzed the quarterly change in bupiness inventories, stated at annual rates in billions of dollars.  We examine 60 observations covering the period from the first quarter of 1955 through the fourth quarter of 1969.  The data is seasonally adjusted.
+
+```{r, fig.width=9,fig.height=3}
+case1=as.ts(scan("case1.txt"))
+case1
+par(mfrow=c(1,3))
+plot(case1)
+acf(case1)
+pacf(case1)
+fit <- arima(case1,order=c(1,0,0))
+fit
+```
+
+```{r, fig.width=9,fig.height=3}
+par(mfrow=c(1,2))
+plot(forecast(fit,h=30))
+fitauto <- auto.arima(case1)
+fitauto
+plot(forecast(fitauto,h=30))
+```
+
+**Case 2: Saving Rate** The saving rate is personal saving as a percent of disposable personal income.  Some economists believe shifts in this rate contribute to business fluctuations.  For example, when people save more of their income they spend less for goods and services.  This reduction in total demand for output may cause national production to fall and unemployment to rise.
+
+We analyze 100 quarterly observations of the US saving rate for the years 1955-1979.  The data is seasonally adjusted.
+```{r, fig.width=9,fig.height=3}
+case2=as.ts(scan("case2.txt"))
+case2
+par(mfrow=c(1,3))
+plot(case2)
+acf(case2)
+pacf(case2)
+```
+
+**Case 3: Coal Production**  The data in this case is monthly bituminous coal production in the US from January 1952 through December 1959, a total of 96 observations.  The data is seasonally adjusted.
+```{r, fig.width=9,fig.height=3}
+case3=as.ts(scan("case3.txt"))
+case3
+par(mfrow=c(1,3))
+plot(case3)
+acf(case3)
+pacf(case3)
+```
+
+**Case 4: Housing Permits**  We develop a model to forecast the index of new private housing units authorized by local building permits.  These are quarterly seasonally adjusted data covering the years 1947-1967.
+
+```{r, fig.width=9,fig.height=3}
+case4=as.ts(scan("case4.txt"))
+case4
+par(mfrow=c(1,3))
+plot(case4)
+acf(case4)
+pacf(case4)
+```
+
+**Case 5: Rail Freight** We model the quarterly freight volume carried by Class I railroads in the US measured in billions of ton-miles.  The data cover the period 1965-1978, a total of 56 observations.  The data is seasonally adjusted.
+
+```{r, fig.width=9,fig.height=3}
+case5=as.ts(scan("case5.txt"))
+case5
+par(mfrow=c(1,3))
+plot(case5)
+acf(case5)
+pacf(case5)
+```
+
+**Case 6: AT\&T Stock Price** The data is the weekly closing price of American Telephone and Telegraph (AT\&T) common shares for the year 1979.  The observations were taken from various issues of the Wall Street Journal, with only 52 observations.
+
+```{r, fig.width=9,fig.height=3}
+case6=as.ts(scan("case6.txt"))
+case6
+par(mfrow=c(1,3))
+plot(case6)
+acf(case6)
+pacf(case6)
+```
+
+**Case 7: Real-Estate Loan**  We analyze the monthly volume of commercial bank real-estate loans in billions of dollars, from January 1973 to October 1978, a total of 70 observations.  The data is derived from reports to the Federal Reserve System from large commercial banks.
+
+```{r, fig.width=9,fig.height=3}
+case7=as.ts(scan("case7.txt"))
+case7
+par(mfrow=c(1,3))
+plot(case7)
+acf(case7)
+pacf(case7)
+```
+
+**Case 9: Air-Carrier Freight**  We study the volume of freight, measured in ton-miles, hauled by air carries in the US.  There are 120 monthly observations covering the years 1969-1978.
+
+```{r, fig.width=9,fig.height=3}
+case9=as.ts(scan("case9.txt"))
+case9
+par(mfrow=c(1,3))
+plot(case9)
+acf(case9)
+pacf(case9)
+```
+
+**Case 10: Profit Margin**  The data is the after-tax profits, measured in cents per dollar of sales, for all US manufacturing corporations.  The data covers the period 1953-1972, a total of 80 observations.
+
+```{r, fig.width=9,fig.height=3}
+case10=as.ts(scan("case10.txt"))
+case10
+par(mfrow=c(1,3))
+plot(case10)
+acf(case10)
+pacf(case10)
+```
+
+**Case 13: Cigar Consumption** The data represents monthly cigar consumption (withdrawals from stock) for the years 1969-1976.  
+
+```{r, fig.width=9,fig.height=3}
+case13=as.ts(scan("case13.txt"))
+case13
+par(mfrow=c(1,3))
+plot(case13)
+acf(case13)
+pacf(case13)
+```
+
+**Case IMA: Refrigerator**
+```{r, fig.width=9,fig.height=3}
+d=scan("case_refrigerator.txt")
+case_ref=as.ts(d[seq(2,length(d),2)])
+case_ref
+par(mfrow=c(1,3))
+plot(case_ref)
+acf(case_ref)
+pacf(case_ref)
+```
+
+Case WWWusage: the numbers of users connected to the Internet through a server every minute.
+```{r, fig.width=9,fig.height=3}
+par(mfrow=c(1,3))
+plot.ts(WWWusage)
+acf(WWWusage)
+pacf(WWWusage)
+fit=arima(WWWusage,order=c(3,1,0))
+fit
+```
+
+# Advanced Model Identification Tools for ARMA
+
+Identifying  the order of the a pure AR or a pure MA is relatively easy.
+
+- The order of a pure AR is equal to the lag of the last significant spike in sample PACF.
+
+- The order of a pure MA is equal to the lag of the last significant spike in sample ACF.
+
+What about ARMA(p,q)?  It is much harder.
+
+**Minimum Information Criterion**
+
+Akaike's information criterion: choose the fitted model which minimizes
+$$
+AIC=-2 \log \mathcal{L} + 2 k 
+$$
+where $\mathcal{L}$ is the likelihood, $k$ is the number of parameters to estimate.
+
+The model with the minimum value of the AIC is often the best model for forecasting. For large values of $n$, minimizing the AIC is equivalent to minimising the cross validation error.
+
+For small values of $n$, the AIC tends to select too many predictors, and so a bias-corrected version of the AIC has been developed.
+
+AIC corrected for small sample bias (AICc) is defined as
+
+$$
+AICc=AIC+\frac{k(k+1)}{n-k-1}.
+$$
+
+
+Bayesian information criterion: choose the fitted model which minimizes
+$$
+BIC = -2 \log \mathcal{L} + k \log n
+$$
+where $\mathcal{L}$ is the likelihood, $k$ is the number of parameters to estimate.
+
+The smaller AIC and BIC are, the better goodness of fit we obtain, i.e., AIC(model1)<AIC(model2) means model1 is preferred to model2, BIC(model1)<BIC(model2) means model1 is preferred to model2.
+
+AIC focuses on predicting power, it is good for forecasting, but tends to overestimate the order of the AR part.
+
+BIC focuses on model specification, good for identifying the true model.
+
+It is important to note that these information criteria tend not to be good guides to selecting the appropriate order of differencing (d) of a model, but only for selecting the values of p and q. This is because the differencing changes the data on which the likelihood is computed, making the AIC values between models with different orders of differencing not comparable. So we need to use some other approach to choose d, and then we can use the AICc to select p and q.
+
+```{r, fig.width=9,fig.height=3}
+case1=as.ts(scan("case1.txt"))
+par(mfrow=c(1,3))
+plot(case1)
+acf(case1)
+pacf(case1)
+fit <- arima(case1,order=c(1,0,0))
+AIC(fit)
+BIC(fit)
+fit2 <- arima(case1,order=c(1,0,1))
+AIC(fit2)
+BIC(fit2)
+```
+
+# Parameter Estimation
+
+After the form of the model and the order are determined in model identification phase,  we need to estimate the parameters, i.e., $\phi_1$, $\theta_1$ and etc.
+
+There are many estimation methods:
+
+- methods of moments, i.e., Yule-Walker equation
+
+- least square estimate, conditional or unconditional
+
+- maximum likelihood estimation
+
+In SAS, we use
+```{r, tidy=FALSE, eval=FALSE, highlight=FALSE }
+ESTIMATE P=1/2/3 Q=1/2/3 METHOD=CLS/ULS/ML
+```
+
+```{r, fig.width=9,fig.height=3}
+n=200
+ts1=arima.sim(n = n, list(order = c(1,0,0), ar = c(0.5)), sd = 1)
+par(mfrow=c(1,3))
+plot.ts(ts1)
+acf(ts1,ylim=c(-1,1),lag.max=10)
+pacf(ts1,ylim=c(-1,1),lag.max=10)
+fit = arima(ts1,order =  c(1,0,0))
+fit
+```
+
+# Diagnostic Check
+Determine model adequacy and suggest alternative models
+
+General idea: have a fitted model.  Is the model adequate?  If not, how do we modify it?
+
+- No model is absolutely true, but it can be adequate.
+
+- Sometimes tests of adequacy will fail to show serious flaws in assumptions due to insensitivity.
+
+- Use the best procedure/model available and adopt the model which shows only slight lack of fit.
+
+
+## Fitted Values
+
+For a time series model, let's first consider the expectation of $Z_t$ conditional on the past observations, 
+$$
+\mathbb{E}[Z_t|\boldsymbol{I}_{t-1}] = f(\mu, \boldsymbol{\phi},\boldsymbol{\theta},\boldsymbol{I}_{t-1}).
+$$
+
+This is essentially a function of the true parameters, and past observations.  Here we have:
+
+- $\mu$: time series model level.
+
+- $\boldsymbol{\phi}= (\phi_1,...,\phi_p)$: AR parameters.
+
+- $\boldsymbol{\theta}= (\theta_1,...,\theta_p)$: MA parameters.
+
+- $\boldsymbol{I}_{t-1}=z_{t-1},z_{t-2},...$ i.e., the past observations.
+
+In practice, we don't know the true parameters.  We can fit the model to the data and estimate the parameters as $\hat{\mu}$, $\hat{\boldsymbol{\phi}}$,  $\hat{\boldsymbol{\theta}}$.  Once we plug these estimates in the conditional expectation $f$, and we can define the fitted value as
+
+$$
+\hat{Z}_t = f(\hat{\mu}, \hat{\boldsymbol{\phi}}, \hat{\boldsymbol{\theta}}, \boldsymbol{I}_{t-1})
+$$
+
+$\hat{Z}_t$ is called the fitted value of $Z_t$.
+
+**Example:** For an AR(2), we have $\tilde{Z}_t = \phi_1 \tilde{Z}_{t-1}+\phi_2 \tilde{Z}_{t-2}+a_t$, or in other words, $Z_t=\mu + \phi_1 (Z_{t-1}-\mu) + \phi_2 (Z_{t-2}-\mu) + a_t$, then the fixed value becomes
+
+\begin{align*}
+\mathbb{E}[Z_t|\boldsymbol{I}_{t-1}]&=\mathbb{E}[\mu + \phi_1 \tilde{Z}_{t-1}+\phi_2 \tilde{Z}_{t-2}+a_t | Z_{t-1}=z_{t-1}, Z_{t-2}=z_{t-2}]\\
+&=\mu + \phi_1 (z_{t-1}-\mu) + \phi_2 (z_{t-2}-\mu)
+\end{align*}
+
+Suppose the parameter estimates are $\hat{\mu}=4.97$, $\hat{\phi}=1.56$,  $\hat{\theta}=-0.72$, and suppose we know $z_{1}=3.81$, $z_{2}=3.82$, $z_{3}=3.83$.  Then
+
+\begin{align*}
+\hat{Z}_3&=4.97+1.56(3.82-4.97)-0.72(3.81-4.97)=4.00\\
+\hat{Z}_4&=4.97+1.56(3.83-4.97)-0.72(3.82-4.97)=4.01
+\end{align*}
+
+Note we cannot obtain fitted value for $\hat{Z}_1$ and $\hat{Z}_2$ since we don't know $z_1$ and $z_0$.
+
+**Example**
+
+```{r, fig.width=8,fig.height=4}
+set.seed(123)
+n=50
+ts1=arima.sim(n = n, list(order = c(2,0,0), ar = c(0.4,0.2)), sd = 1)
+fit = arima(ts1,order =  c(2,0,0))
+plot.ts(ts1)
+points(fitted(fit),pch=20,col="grey")
+points(fitted(fit),type="l",col="grey")
+```
+
+
+## Residuals
+
+The residual from a time series model are defined as 
+\begin{align*}
+\hat{a}_t =  Z_t - \hat{Z}_t
+\end{align*}
+
+Alternatively, in operator notation, the residuals can understood the following way. If the model is
+\begin{align*}
+(Z_t-\mu) - \phi_1 (Z_{t-1}-\mu) - ... - \phi_p (Z_{t-p}-\mu) &= a_t - \theta_1 a_{t-1} ... - \theta_q a_{t-q}
+\end{align*}
+where $Z_t$ is observed.  $\mu$, $\phi_1$, ... , $\phi_p$, $\theta_1$, ..., $\theta_q$ are estimated.  Then $a_t$ can be inferred based on $Z_t$ $\hat{\mu}$, $\hat{\phi}_1$, ... , $\hat{\phi}_p$, $\hat{\theta}_1$, ..., $\hat{\theta}_q$.
+
+\begin{align*}
+\phi(B) (Z_t-\mu)  &= \theta(B) a_{t}\\
+a_{t} &= \frac{\phi(B) (Z_t-\mu)}{\theta(B)}\\
+\end{align*}
+
+Therefore, the residuals can be obtained as
+\begin{align*}
+\hat{a}_{t} &= \frac{\hat{\phi}(B) (Z_t-\hat{\mu})}{\hat{\theta}(B)}\\
+\end{align*}
+
+Remarks:
+
+- It can be shown that $\hat{a}_{t}=a_t + O(1/\sqrt{n})$, if the model is correct.  As more and more data becomes available, i.e., $n \to \infty$, $\hat{a}_t$ closely approximates $a_t$, a white noise.  Therefore, studying $\hat{a}_t$ could indicate model inadequacy, for example, checking residual ACF to reveal model misspecification.
+
+- If the model is correct, $\hat{a}_{t}$ and $\hat{a}_{t+k}$ should be uncorrelated for all $k\neq 0$ , and should be normal with mean 0, and variance estimated by $\hat{\sigma}^2_a=\sum \hat{a}_{t}^2 / (n-r)$ where $r$ is the total number of parameter estimated in the model.
+
+- test of normality of residual: QQ-plot
+
+- test of zero mean: $\sum \hat{a}_{t}/n$
+
+- test of zero correlation: ACF of $\hat{a}_{t}$
+
+
+
+## Residual Analysis to Detect Lack of Fit
+
+Residuals' ACF reveals much about the lack of fit.  If the model fits the data well, then residual will behave like white noises.
+
+### ACF of Residuals
+
+We can test the ACF of the residuals to be zero or not.  If we can reject $H_0: \rho_k(a_t)=0$, then the residuals are not white noise, which indicates the lack of fit.
+
+To test $H_0: \text{Corr}(\hat{a}_t,\hat{a}_{t+k})=\rho_k(\hat{a}_t)=0$ for a particular $k$, we reject $H_0$ if $|\hat{\rho}_k(\hat{a}_t)| > 2 \text{SD}(\hat{\rho}_k(\hat{a}_t))$.
+
+For a large or moderate $k$, $\text{SD}(\hat{\rho}_k(\hat{a}_t)) \approx 1/\sqrt{n}$.  This is due to Bartlett theorem.  This is useful because we now understand the width of the confidence interval of ACF is essentially $4 * \text{SD}(\hat{\rho}_k(\hat{a}_t)) \approx 4/\sqrt{n}$.
+
+
+**Simulation Example**
+
+```{r, fig.width=9,fig.height=3}
+par(mfrow=c(1,3))
+n=10
+sqrt(1/n)*2
+ts1=arima.sim(n = n, list(order = c(1,0,0), ar = c(0.5)), sd = 1)
+acf(ts1,ylim=c(-1,1),lag.max=8)
+
+n=100
+sqrt(1/n)*2
+ts2=arima.sim(n = n, list(order = c(1,0,0), ar = c(0.5)), sd = 1)
+acf(ts2,ylim=c(-1,1),lag.max=8)
+
+n=1000
+sqrt(1/n)*2
+ts3=arima.sim(n = n, list(order = c(1,0,0), ar = c(0.5)), sd = 1)
+acf(ts3,ylim=c(-1,1),lag.max=8)
+
+```
+
+However, the approximation is not very good for small $k$.  The SD is usually more complex.  For example, for AR(1), $\tilde{Z}_t=\phi_1 \tilde{Z}_{t-1} + a_t$, we have
+
+\begin{align*}
+\text{Var}(\hat{\rho}_1(\hat{a}_t)) &\approx \frac{\phi_1}{n} < \frac{1}{n}\\
+\text{Var}(\hat{\rho}_2(\hat{a}_t)) &\approx \frac{1-\phi_1^2+\phi_1^4}{n} < \frac{1}{n}\\
+\text{Var}(\hat{\rho}_k(\hat{a}_t)) &\approx \frac{1}{n} \text{ for }k \geq 3
+\end{align*}
+
+For MA(1), $\tilde{Z}_t=a_t - \theta_1 a_{t-1}$, we have
+
+\begin{align*}
+\text{Var}(\hat{\rho}_1(\hat{a}_t)) &\approx \frac{\theta_1}{n} < \frac{1}{n}\\
+\text{Var}(\hat{\rho}_2(\hat{a}_t)) &\approx \frac{1-\theta_1^2+\theta_1^4}{n} < \frac{1}{n}\\
+\text{Var}(\hat{\rho}_k(\hat{a}_t)) &\approx \frac{1}{n} \text{ for }k \geq 3
+\end{align*}
+
+
+**Bartlett Theorem: ** Let $z_1,...,z_n$ be a realization from a stationary time series model with Gaussian random error.  Then for large $n$, we have
+
+(1) If $\rho_k=0$ for $k \geq 0$, then 
+$$\text{Var}(\hat{\rho}_k) \approx \frac{1}{n} \text{ for } k \geq 0.$$
+
+(2) If $\rho_k \neq 0$ for $k \leq q$, and $\rho_k = 0$ for $k > q$, then
+$$\text{Var}(\hat{\rho}_k) \approx \frac{1}{n}(1+2\sum_{i=1}^{q}\rho_i^2) \text{ for } k > q.$$
+for $k>q$.
+
+This theorem is useful for determining if $\rho_k$ is effectively zero.  This is important since the behavior of the ACF not only helps us identifying a time series model, but it indicates whether the series is stationary.
+
+R.L. Anderson shows that the sampling distribution of $\hat{\rho}_k$ is approximately normal with zero mean for large $n$.
+
+**Example**
+
+
+
+
+
+
+Case 1: business inventories
+```{r, fig.width=9,fig.height=6}
+case1=as.ts(scan("case1.txt"))
+case1
+1/sqrt(length(case1))*2
+par(mfrow=c(2,3))
+plot(case1)
+acf(case1,ylim=c(-1,1))
+pacf(case1,ylim=c(-1,1))
+fit <- arima(case1,order=c(1,0,0))
+fit
+plot(fit$residuals)
+acf(fit$residuals,ylim=c(-1,1))
+pacf(fit$residuals,ylim=c(-1,1))
+```
+
+### A Portmanteau Lack of Fit Test
+
+Alternative and adjunct to testing on $\hat{\rho}_k(\hat{a}_t)$ individually, diagnose of first a few $\hat{\rho}_k(\hat{a}_t)$ "taken as a whole" to indicate model inadequacy.
+
+Results: Suppose we have the first $L$ residual autocorrelation, if the fitted model is correct then
+
+\begin{align*}
+Q=n\sum_{k=1}^{L} \hat{\rho}_k^2(\hat{a}_t)  \sim \chi^2(L-r)
+\end{align*}
+
+where $r$ is the number of parameters estimated in the model, i.e., $p/q/p+q$,  and n is the sample size, i.e., number of observations.  This is called Portmanteau test, or Box–Pierce test or Box-Ljung test.
+
+```{r, fig.width=9,fig.height=6}
+Box.test(resid(fit), lag = 10, type = "Ljung-Box", fitdf = 1)
+acf=acf(resid(fit))
+length(case1)*(length(case1)+2)*sum(acf$acf[2:11]^2/(length(case1)-1:10))
+```
+
+
+If the model is inadequate, $Q$ tends to get large.  If the model is adequate, then $\hat{a}_t$ is white noise, $Q$ tends to be small.
+
+Reject $H_0$ if $Q > \chi^2_{L-r}$, which means the model is inadequate.
+
+
+```{r}
+n = 100
+MC=10000
+Q_vec=rep(NA,MC)
+for (it in 1:MC)
+{
+  z = rnorm(n)
+  test = Box.test(z, lag = 10, type = "Ljung-Box", fitdf = 0)
+  Q_vec[it]=test$statistic
+}
+hist(Q_vec,xlab="Q",breaks=30,main="Q's distribution")
+abline(v=qchisq(0.95,df=10-0))
+```
+
+A closer look at $Q$:
+
+$$
+Q=n \sum_{k=1}^{L} \hat{\rho}_k^2(\hat{a}_t)=\sum_{k=1}^{L} [\sqrt{n}\hat{\rho}_k(\hat{a}_t)]^2
+$$
+We know $\hat{\rho}_k(\hat{a}_t) \sim N(0,1/\sqrt{n})$ by Bartlett theorem, therefore, $\sqrt{n}\hat{\rho}_k(\hat{a}_t) \sim N(0,1)$.
+
+Note that if $X \sim N(0,1)$, $Y \sim N(0,1)$, and $X$ and $Y$ are independent, then $X^2 \sim \chi^2(df=1)$, $Y^2 \sim \chi^2(df=1)$, and $X^2+Y^2 \sim \chi^2(df=2)$.  
+
+Once we sum over all the ACF squared together (but the sample ACF are not independent any more), we have
+
+$$
+\sum_{k=1}^{L} [\sqrt{n}\hat{\rho}_k(\hat{a}_t)]^2 \sim \chi^2(df=L-r)
+$$
+
+### Summary
+
+The residual ACF $\hat{\rho}_k^2(\hat{a}_t)$ is useful for detecting lack of fit by:
+
+- providing a check on the white noise property of the individual $\hat{a}_t$ on individual ACFs.
+
+- provide an overall check of adequacy ($Q$)
+
+## Revise Model Specification
+
+If the residuals do not behave like a white noise, then we need to re-specify the model.  For this part, the residuals ACF $\hat{\rho}_k(\hat{a}_t)$ can also propose alternative models, i.e., model identification.
+
+Example: model misspecification
+
+Suppose a model a fit as MA(1)
+
+\begin{align*}
+\tilde{Z}_{t} = a_t - \theta_1 a_{t-1}
+\end{align*}
+
+and the residuals $\hat{a}_t$ and residuals ACF $\hat{\rho}_k(\hat{a}_t)$ was obtained below.
+
+
+ k | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+---+---+---+---+---+---+---+---+---+---
+$\hat{\rho}_k(\hat{a}_t)$ | 0.62 | 0.35 | 0.17 | 0.08 | 0.03 | 0.01 | -0.01 | -0.02 | 0.03 |
+
+```{r}
+plot(0:9,c(1,0.62 , 0.35 , 0.17 , 0.08 , 0.03 , 0.01 , -0.01 , -0.02 , 0.03 ),type="h")
+abline(h=0)
+```
+
+The function $\hat{\rho}_k(\hat{a}_t)$, for a large $k$, dies out exponentially.  It is like $\hat{\rho}_k(\hat{a}_t)$ is from a AR(1) with $\hat{\phi}_1=0.6$.  It is certainly not like a white noise.
+
+Therefore, the original model of MA(1) is probably wrong, i.e., $\hat{a}_t$ is correlated.  
+
+In fact, from the form of the residual ACF $\hat{\rho}_k(\hat{a}_t)$, it looks like $\hat{a}_t$ might be AR(1), i.e.,
+
+\begin{align*}
+a_t - \phi_1 a_{t-1} = e_t
+\end{align*}
+
+where $e_t$ is white noise.  
+
+So we write
+
+\begin{align*}
+\tilde{Z}_t = a_t - \theta_1 a_{t-1}  &\text{ and }  \tilde{Z}_{t-1} = a_{t-1} - \theta_1 a_{t-2}\\
+\tilde{Z}_t - \phi_1 \tilde{Z}_{t-1} &= ( a_t - \phi_1 a_{t-1} )- \theta_1 ( a_{t-1} - \phi_1 a_{t-2} )\\
+&= e_t -\theta_1 e_{t-1}
+\end{align*}
+
+where $e_t$ is white noise.
+
+Therefore, $\tilde{Z}_t$ has a form of ARMA(1,1) instead of MA(1), because the residual is a AR(1).
+
+In operator notation, we originally have
+
+\begin{align*}
+\tilde{Z}_t = (1-\theta_1 B ) a_t
+\end{align*}
+
+From the form of the residual ACF, we suspect $\hat{a}_t$ is an AR(1)
+
+\begin{align*}
+(1-\phi_1 B )a_t = e_t
+\end{align*}
+
+where $e_t$ is white noise. In other words
+
+\begin{align*}
+a_t = \frac{1}{1-\phi_1 B}e_t
+\end{align*}
+
+Substitute the above formula into $\tilde{Z}_t = (1-\theta_1 B ) a_t$, we have
+
+\begin{align*}
+\tilde{Z}_t &= \frac{1-\theta_1 B}{1-\phi_1 B}e_t\\
+(1-\phi_1 B)\tilde{Z}_t &= (1-\theta_1 B)e_t
+\end{align*}
+
+This type of manipulation can be generalized e.g., if the original series is fitted to AR(1)
+
+\begin{align*}
+(1-\phi_1 B ) \tilde{Z}_t = a_t \quad \quad (*)
+\end{align*}
+
+But residual ACF behave like AR(1)
+
+\begin{align*}
+(1-\phi^* B ) a_t = e_t
+\end{align*}
+
+Then substitute the above formula into $(*)$, i.e., multiply $(1-\phi^* B )$ on both sides of $(*)$. we have 
+
+\begin{align*}
+(1 - \phi^* B )(1-\phi_1 B ) \tilde{Z}_t &= (1-\phi^* B )a_t = e_t\\
+(1 - (\phi^* + \phi_1) B + \phi^* \phi_1 B^2 ) \tilde{Z}_t &= e_t\\
+(1 - \phi_{01} B - \phi_{02} B^2 ) \tilde{Z}_t &= e_t
+\end{align*}
+
+which is an AR(2) model.
+
+Other types of model inadequacy include:
+
+- changing parameter values over time
+
+- change of model over time.
+
+To deal with these issues, we refer to change time detection and divide the time series data into parts, and refitting each part.
+
+
+**Case 2: Saving Rates**
+```{r, fig.width=9,fig.height=3}
+case2=as.ts(scan("case2.txt"))
+par(mfrow=c(1,3))
+plot(case2)
+acf(case2)
+pacf(case2)
+```
+
+From the ACF and PACF, it seems to be an AR(1).  So we fit AR(1) to the data as follows.
+
+```{r}
+fit=arima(case2,order=c(1,0,0))
+fit
+```
+
+After fitting AR(1), we obtain the residuals and plot their ACF and PACF as follows.
+
+```{r, fig.width=9,fig.height=3}
+par(mfrow=c(1,3))
+plot(resid(fit))
+acf(resid(fit))
+pacf(resid(fit))
+```
+
+Clearly, the ACF at lag of 2 jumps out, which means that the residuals are not white noise.  In fact, if we use Box-Ljung test, we get:
+```{r}
+Box.test(resid(fit), lag = 3, type = "Ljung-Box", fitdf = 1)
+```
+
+which rejects the null hypothesis.  Suppose we are concerned with the nonzero ACF at lag 2, we need to revise our model.  But how do we revise it?  Looking at the ACF of residuals, we think the residuals are possibly an MA(2) since ACF gets cut off at lag of 2.  Therefore, we refit an ARMA(1,2) to the data.
+
+```{r}
+fit2=arima(case2,order=c(1,0,2))
+fit2
+```
+
+The output shows that most of the parameters are significant.  We further look at the residuals.
+
+```{r, fig.width=9,fig.height=3}
+par(mfrow=c(1,3))
+plot(resid(fit2))
+acf(resid(fit2))
+pacf(resid(fit2))
+```
+
+The residual ACF and PACF all look fine too.  So it seems like we have arrived at the final model?  **Not really.**  If you look the output from `fit2`, we see that the one coefficient in ARMA(1,2) is not significant, that is, $\theta_1$.  Its estimate is less than twice of the standard error. Therefore, we can further simplify the model by suppressing $\theta_1=0$.  Here is the code for doing this regularization.
+
+```{r}
+fit3=arima(case2,order=c(1,0,2),fixed=c(NA,0,NA,NA))
+fit3
+```
+
+As we can see all coefficients are significant.  The residual below look fine too.
+
+```{r, fig.width=9,fig.height=3}
+par(mfrow=c(1,3))
+plot(resid(fit3))
+acf(resid(fit3))
+pacf(resid(fit3))
+```
+
+So our final model is ARMA(1,2) with $\theta_1=0$.
+
+In fact, if we recall the ACF of MA(2) with $\theta_1=0$ at lag of 1 is $\rho_1 = \frac{-\theta_1+\theta_1 \theta_2}{1+\theta_1^2 + \theta_2^2} = 0$, we have
+
+```{r, fig.width=8,fig.height=4}
+n=20000
+ts1=arima.sim(n = n, list(ma = c(0, 0.5)), sd = 1)
+par(mfrow=c(1,2))
+acf(ts1,ylim=c(-1,1),lag.max=10)
+pacf(ts1,ylim=c(-1,1),lag.max=10)
+```
+
+Our final model is
+
+\begin{align*}
+(1 - \phi_{01} B ) (Z_t - \mu) &= (1 - \theta_{1} B - \theta_{2} B^2) a_t\\
+(1 - 0.7376 B ) (Z_t - 6.0207) &= (1 - 0 B - 0.3414 B^2) a_t\\
+(1 - 0.7376 B ) (Z_t - 6.0207) &= (1 - 0.3414 B^2) a_t
+\end{align*}
+where $a_t \sim N(0,\sigma^2_a=0.4412)$.
+
+
+
+
+
+
+
+
+
+
