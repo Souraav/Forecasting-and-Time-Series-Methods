@@ -42,7 +42,7 @@ htmltools::includeHTML("AdSense.html")
 
 **Time series model (i.e., stochastic process):** Let $Z_t$ be a sequence of random variables where $t=1,2,3,...,n$ represents its index often considered as time point, then $\{Z_t, t=1,2,...,n\}$ is called a stochastic process.
 
-For example, Let $Z_t$ represent [SQ(Square)](https://finance.yahoo.com/quote/SQ?p=SQ&.tsrc=fin-srch) stock price (daily). [Square](https://g.co/kgs/gGHKbF) is financial services, merchant services aggregator, and mobile payment company. The famous app of this company is [Cash](https://cash.app/app/QPPSXXX).
+1. Example 1: Let $Z_t$ represent [SQ(Square)](https://finance.yahoo.com/quote/SQ?p=SQ&.tsrc=fin-srch) stock price (daily). [Square](https://g.co/kgs/gGHKbF) is financial services, merchant services aggregator, and mobile payment company. The famous app of this company is [Cash](https://cash.app/app/QPPSXXX) (you can get $5 if you refer a friend to use it). Then $Z_1$ represents the 1st day's price, and $Z_2$ represent the 2nd day price, and so on.
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 library(quantmod)
@@ -67,11 +67,86 @@ p <- SQ_daily %>%
 
 # Turn it interactive with ggplotly
 p <- ggplotly(p)
-
 htmltools::div(p, align="center")
 ```
 
-Then $Z_1$ represents the 1st day's price, and $Z_2$ represent the 2nd day price, and so on.
+2. Example 2: Johnson & Johnson Quarterly Earnings per share, 84 quarters (21 years) measured from the first quarter of 1960 to the last quarter of 1980.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(astsa) # SEE THE FOOTNOTE
+# plot(jj, type="o", ylab="Quarterly Earnings per Share")
+# summary(jj)
+library(zoo)
+JJ <- data.frame(Date=as.yearmon(time(jj)), EPS=jj)
+
+p <- JJ %>%
+  ggplot(aes(x=Date, y=jj)) +
+  # geom_area(fill="#69b3a2", alpha=0.5) +
+  geom_line(color="#69b3a2") +
+  ylab("Quarterly Earnings per Share") +
+  ggtitle("Johnson & Johnson Quarterly Earnings") +
+  theme_ipsum()
+
+# Turn it interactive with ggplotly
+p <- ggplotly(p)
+htmltools::div(p, align="center")
+```
+
+3. Example 3: A small .1 second (1000 points) sample of recorded speech for the phrase "aaa...hhh".
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+Speech <- data.frame(Time=as.yearmon(time(speech)), speech=speech)
+
+p <- Speech %>%
+  ggplot(aes(x=Time, y=speech)) +
+  # geom_area(fill="#69b3a2", alpha=0.5) +
+  geom_line(color="#69b3a2") +
+  ylab("Speech Recording") +
+  ggtitle("Speech Recording") +
+  theme_ipsum()
+
+# Turn it interactive with ggplotly
+p <- ggplotly(p)
+htmltools::div(p, align="center")
+```
+
+4. Example 4: Coronavirus COVID-19 outbreak statistics (Time series of the countries with more than 200 cumulative confirmed cases) [Data](https://github.com/GuangchuangYu/nCov2019) & [Other Analyses](http://www.bcloud.org/e/)
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# remotes::install_github("GuangchuangYu/nCov2019", dependencies = T)
+library(nCov2019)
+# x <- get_nCov2019(lang = "zh")
+# save(x, file = "Lecture/data/nCov2020_3_1.rda", compress='xz')
+# remotes::install_github("JohnCoene/coronavirus")
+# x_en <- get_nCov2019(lang = "en")
+# class(x_en)
+# save(x_en, file = "Lecture/data/nCov2020_3_1_en.rda", compress='xz')
+# load(file = "Lecture/data/nCov2020_3_1_en.rda")
+
+library(forcats)
+library(ggplot2)
+require(ggrepel)
+x_en <- load_nCov2019()
+# summary(x_en$global)
+
+country200 <- unique(x_en$global[which(x_en$global$cum_confirm>200),"country"])
+draw200 <- subset(x_en$global, country %in% country200)
+nCov <- ggplot(draw200, aes(time, as.numeric(cum_confirm), group=country, color=country)) +
+  geom_point() + geom_line() +
+  geom_text_repel(aes(label=country), data=draw200[draw200$time == time(x_en), ], hjust=1) +
+  theme_minimal(base_size = 14) + theme(legend.position='none') +
+  xlab(NULL) + ylab(NULL) + 
+  theme_ipsum()
+
+nCov_org <- ggplotly(nCov)
+htmltools::div(nCov_org, align="center")
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+nCov_log <- nCov+scale_y_log10()
+nCov_log <- ggplotly(nCov_log)
+htmltools::div(nCov_log, align="center")
+```
 
 The sequence of actual observations from this sequence of random variables are written as $z_1,z_2,...,z_n$. This realization is the time series data.
 
