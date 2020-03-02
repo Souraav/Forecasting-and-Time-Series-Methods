@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
 
 <head>
 
 <meta charset="utf-8" />
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
 
@@ -224,7 +224,7 @@ window.initializeCodeFolding = function(show) {
 
     // create a collapsable div to wrap the code in
     var div = $('<div class="collapse r-code-collapse"></div>');
-    if (show)
+    if (show || $(this)[0].classList.contains('fold-show'))
       div.addClass('in');
     var id = 'rcode-643E0F36' + currentIndex++;
     div.attr('id', id);
@@ -340,7 +340,6 @@ code {
 }
 img {
   max-width:100%;
-  height: auto;
 }
 .tabbed-pane {
   padding-top: 12px;
@@ -402,6 +401,7 @@ summary {
   border: none;
   display: inline-block;
   border-radius: 4px;
+  background-color: transparent;
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li {
@@ -414,27 +414,10 @@ summary {
 }
 </style>
 
-<script>
-$(document).ready(function () {
-  window.buildTabsets("TOC");
-});
-
-$(document).ready(function () {
-  $('.tabset-dropdown > .nav-tabs > li').click(function () {
-    $(this).parent().toggleClass('nav-tabs-open')
-  });
-});
-</script>
-
 <!-- code folding -->
 <style type="text/css">
 .code-folding-btn { margin-bottom: 4px; }
 </style>
-<script>
-$(document).ready(function () {
-  window.initializeCodeFolding("show" === "show");
-});
-</script>
 
 
 
@@ -513,6 +496,14 @@ $(document).ready(function () {
 </ul>
 </div>
 
+<!--Add Google AdSense -->
+<script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({
+    google_ad_client: "ca-pub-7402334489001296",
+    enable_page_level_ads: true
+  });
+</script>
 <div id="introduction-to-r-and-r-studio" class="section level1">
 <h1><span class="header-section-number">1</span> Introduction to R and R Studio</h1>
 <div id="powerful-statistical-language-r" class="section level2">
@@ -953,11 +944,11 @@ reg$coeffcients</code></pre>
 <pre class="r"><code>qnorm(0.975)</code></pre>
 <pre><code>## [1] 1.959964</code></pre>
 <pre class="r"><code>rnorm(10)</code></pre>
-<pre><code>##  [1]  0.4483561  1.5071613 -0.6353266  2.4779359  0.4613393  2.2127425
-##  [7]  0.8197694  1.6539754  0.7856177  0.8555540</code></pre>
+<pre><code>##  [1] -0.2819787 -0.9036309 -1.3023415  0.4061090 -0.1085384  0.4049376
+##  [7]  1.0404000 -1.4115801 -0.9889663  0.1840744</code></pre>
 <pre class="r"><code>rnorm(n=10,mean=100,sd=20)</code></pre>
-<pre><code>##  [1]  84.02653  91.15277  95.17720  95.09843  97.16679  74.08837  97.93173
-##  [8] 113.48045 105.22061  93.89071</code></pre>
+<pre><code>##  [1] 108.83619 111.86944 114.92751  81.73433  93.26282 101.22719  91.71932
+##  [8] 131.29081 125.08776  89.67233</code></pre>
 </div>
 <div id="functions" class="section level2">
 <h2><span class="header-section-number">3.6</span> Functions</h2>
@@ -1119,6 +1110,28 @@ $(document).ready(function () {
 
 
 </script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+<script>
+$(document).ready(function () {
+  window.initializeCodeFolding("show" === "show");
+});
+</script>
+
 
 <!-- dynamically load mathjax for compatibility with self-contained -->
 <script>

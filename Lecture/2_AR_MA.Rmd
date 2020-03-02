@@ -30,6 +30,11 @@ h2 { /* Header 2 */
 }
 </style>
 
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(eval = TRUE, warning=FALSE, message = FALSE)
+htmltools::includeHTML("AdSense.html")
+```
+
 R packages:
 ```{r, warning=FALSE, message=FALSE, results = 'hide'}
 # Install necessary packages

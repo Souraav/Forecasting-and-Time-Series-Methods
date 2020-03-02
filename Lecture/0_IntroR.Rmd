@@ -15,7 +15,7 @@ output:
 editor_options: 
   chunk_output_type: console
 ---
-```{r setup, echo=FALSE, include=FALSE}
+```{r setup, echo=FALSE}
 knitr::opts_chunk$set(eval = TRUE, warning=FALSE, message = FALSE)
 htmltools::includeHTML("AdSense.html")
 ```
