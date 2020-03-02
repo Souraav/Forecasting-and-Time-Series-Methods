@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
 
 <head>
 
 <meta charset="utf-8" />
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
 <meta name="author" content="Xiaorui Zhu (zhuxr@mail.uc.edu)" />
@@ -225,7 +225,7 @@ window.initializeCodeFolding = function(show) {
 
     // create a collapsable div to wrap the code in
     var div = $('<div class="collapse r-code-collapse"></div>');
-    if (show)
+    if (show || $(this)[0].classList.contains('fold-show'))
       div.addClass('in');
     var id = 'rcode-643E0F36' + currentIndex++;
     div.attr('id', id);
@@ -351,7 +351,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
       var style = rule.style.cssText;
       // check if color or background-color is set
-      if (rule.style.color === '' || rule.style.backgroundColor === '') continue;
+      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
       // replace div.sourceCode by a pre.sourceCode rule
       sheets[i].deleteRule(j);
       sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
@@ -408,7 +408,6 @@ code {
 }
 img {
   max-width:100%;
-  height: auto;
 }
 .tabbed-pane {
   padding-top: 12px;
@@ -470,6 +469,7 @@ summary {
   border: none;
   display: inline-block;
   border-radius: 4px;
+  background-color: transparent;
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li {
@@ -482,27 +482,10 @@ summary {
 }
 </style>
 
-<script>
-$(document).ready(function () {
-  window.buildTabsets("TOC");
-});
-
-$(document).ready(function () {
-  $('.tabset-dropdown > .nav-tabs > li').click(function () {
-    $(this).parent().toggleClass('nav-tabs-open')
-  });
-});
-</script>
-
 <!-- code folding -->
 <style type="text/css">
 .code-folding-btn { margin-bottom: 4px; }
 </style>
-<script>
-$(document).ready(function () {
-  window.initializeCodeFolding("show" === "show");
-});
-</script>
 
 
 
@@ -568,6 +551,16 @@ h2 { /* Header 2 */
   color: DarkBlue;
 }
 </style>
+<!--Add Google AdSense -->
+<script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({
+    google_ad_client: "ca-pub-7402334489001296",
+    enable_page_level_ads: true
+  });
+</script>
+
+<script data-ad-client="ca-pub-7402334489001296" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
 <p>R packages:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a><span class="co"># Install necessary packages</span></span>
 <span id="cb1-2"><a href="#cb1-2"></a>list_packages &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;forecast&quot;</span>, <span class="st">&quot;readxl&quot;</span>, <span class="st">&quot;stargazer&quot;</span>, <span class="st">&quot;fpp&quot;</span>, </span>
@@ -597,6 +590,9 @@ AR(2): \tilde{Z}_t &amp;= \phi_1 \tilde{Z}_{t-1} + \phi_2 \tilde{Z}_{t-2} + a_t\
 AR(p): \tilde{Z}_t &amp;= \phi_1 \tilde{Z}_{t-1} + ... + \phi_p \tilde{Z}_{t-p} + a_t
 \end{align*}\]</span></p>
 <p>where <span class="math inline">\(a_t\)</span> is white noise and is commonly referred to as “innovation” or “shock.”</p>
+<blockquote>
+<p>Why Innovation? The predictable components of your time-series are removed, so the leftover seems the only unknown thing. So is was called “innovation”.</p>
+</blockquote>
 <p><strong>Moving average models (MA)</strong> <span class="math display">\[\begin{align*}
 MA(1): \tilde{Z}_t &amp;= a_t - \theta_1 a_{t-1}\\
 MA(2): \tilde{Z}_t &amp;= a_t - \theta_1 a_{t-1} - \theta_2 a_{t-2}\\
@@ -1138,6 +1134,28 @@ $(document).ready(function () {
 
 
 </script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+<script>
+$(document).ready(function () {
+  window.initializeCodeFolding("show" === "show");
+});
+</script>
+
 
 <!-- dynamically load mathjax for compatibility with self-contained -->
 <script>
