@@ -1,1 +1,6 @@
+title: "Forecasting and Time Series Methods"
+description: "By Xiaorui Zhu & Yan Yu <br /> The greatest truths are the simplest. -- Tao Te Ching <br /> Thinking details thoughtfully, solving in whole elegantly. -- Xiaorui Zhu"
+show_downloads: FALSE
 theme: jekyll-theme-cayman
+google_analytics: [UA-54280540-6]
+markdown: kramdown
