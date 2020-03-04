@@ -16,11 +16,11 @@ Dr. Martin Levy, Professor of Business Analytics at University of Cincinnati
 
 [Stationarity, ACF, PACF](Lecture/1_Stationarity_ACF_PACF.html)
 
-<!--- ## Autoregression & Moving Average
+## Autoregression & Moving Average
 
 [AR, MA](Lecture/2_AR_MA.html)
 
-## ARMA & ARIMA
+<!--- ## ARMA & ARIMA
 
 [ARMA, ARIMA](Lecture/3_ARMA_ARIMA.html)
 
