@@ -639,6 +639,24 @@ ARMA(p,q): \tilde{Z}_t &amp;= \phi_1 \tilde{Z}_{t-1} + ... + \phi_p \tilde{Z}_{t
 Z_t-\mu &amp;= \phi_1 (Z_{t-1}-\mu)  + a_t\\
 Z_t &amp;= c + \phi_1 Z_{t-1}  + a_t\\
 \end{align*}\]</span> where <span class="math inline">\(c=\mu(1-\phi_1)\)</span>.</p>
+<p><strong>Assumptions:</strong></p>
+<ol style="list-style-type: decimal">
+<li><span class="math inline">\(a_t\sim N(0, \sigma_a^2)\)</span>, meaning that the errors are independently distributed as a white noise that has mean 0 and constant variance.</li>
+<li>Properties of the errors <span class="math inline">\(a_t\)</span> are independent of <span class="math inline">\(\tilde{Z}_t\)</span>.</li>
+<li>The series <span class="math inline">\(\tilde{Z}_1\)</span>, <span class="math inline">\(\tilde{Z}_2\)</span>, … is (weakly) stationary. A requirement for a stationary AR(1) is that <span class="math inline">\(|\phi|&lt;1\)</span>. We’ll see why below.</li>
+</ol>
+<p><strong>Properties of the AR(1):</strong></p>
+<p>Formulas for the mean, variance, and ACF for a time series process with an AR(1) model follow.</p>
+<ul>
+<li><p>The (theoretical) <strong>mean</strong> of <span class="math inline">\(Z_t\)</span> is <span class="math display">\[E(Z_t)=\mu = \dfrac{c}{1-\phi_1}\]</span></p></li>
+<li><p>The <strong>variance</strong> of <span class="math inline">\(\tilde{Z}_t\)</span> is <span class="math display">\[\text{Var}(\tilde{Z}_t) = \dfrac{\sigma^2_a}{1-\phi_1^2}\]</span></p></li>
+<li><p>The correlation between observations <span class="math inline">\(k\)</span> time periods apart is <span class="math display">\[\rho_k = \phi^k_1\]</span></p></li>
+</ul>
+<p>This defines the theoretical ACF for a time series variable with an AR(1) model.</p>
+<blockquote>
+<p>Note!</p>
+<p><span class="math inline">\(\phi_1\)</span> is the slope in the AR(1) model and we now see that it is also the lag 1 autocorrelation.</p>
+</blockquote>
 <p><strong>To ensure AR(1) is stationary (we mostly work with the concept of weakly stationary through the course), we need <span class="math inline">\(|\phi_1|&lt;1\)</span>.</strong></p>
 <p>To see why <span class="math inline">\(|\phi_1|&lt;1\)</span> is sufficient for stationarity, we can rewrite the AR(1) as <span class="math display">\[\begin{align*}
 \tilde{Z}_t &amp;= \phi_1 \tilde{Z}_{t-1}  + a_t\\

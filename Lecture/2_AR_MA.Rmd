@@ -142,6 +142,28 @@ Z_t &= c + \phi_1 Z_{t-1}  + a_t\\
 \end{align*}
 where $c=\mu(1-\phi_1)$.
 
+**Assumptions:**
+
+1. $a_t\sim N(0, \sigma_a^2)$, meaning that the errors are independently distributed as a white noise that has mean 0 and constant variance. 
+2. Properties of the errors $a_t$ are independent of $\tilde{Z}_t$.
+3. The series $\tilde{Z}_1$, $\tilde{Z}_2$, ... is (weakly) stationary. A requirement for a stationary AR(1) is that $|\phi|<1$. We’ll see why below.
+
+**Properties of the AR(1):**
+
+Formulas for the mean, variance, and ACF for a time series process with an AR(1) model follow.
+
+- The (theoretical) **mean** of $Z_t$ is $$E(Z_t)=\mu = \dfrac{c}{1-\phi_1}$$
+
+- The **variance** of $\tilde{Z}_t$ is $$\text{Var}(\tilde{Z}_t) = \dfrac{\sigma^2_a}{1-\phi_1^2}$$
+
+- The correlation between observations $k$ time periods apart is $$\rho_k = \phi^k_1$$
+
+This defines the theoretical ACF for a time series variable with an AR(1) model.
+
+> Note!
+>
+> $\phi_1$ is the slope in the AR(1) model and we now see that it is also the lag 1 autocorrelation.
+ 
 **To ensure AR(1) is stationary (we mostly work with the concept of weakly stationary through the course), we need $|\phi_1|<1$.**  
 
 To see why $|\phi_1|<1$ is sufficient for stationarity, we can rewrite the AR(1) as 
