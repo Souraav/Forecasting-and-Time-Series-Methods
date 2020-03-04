@@ -222,6 +222,25 @@ Note that, usually, we assume all the joint distributions are multivariate norma
 > 
 > The probabilistic beharior of the underlying model does not change!
 
+> **Exercise: **
+> 
+> 1. Quick replicate the above example code to plot the correlation of $f_{Z_2,Z_3}(z_2,z_3)$ and $f_{Z_6,Z_7}(z_6,z_7)$;
+> 
+> 1. Quick replicate the above example code to plot the correlation of $f_{Z_9,Z_{16}}(z_9,z_{16})$ and $f_{Z_{11},Z_{18}}(z_{11},z_{18})$;
+
+```{r, echo=FALSE, eval=FALSE}
+par(mfrow=c(2,2))
+plot(ts_mat[2,],ts_mat[3,],xlab="Z_2",ylab="Z_3",col="red",pch=20,
+     main=paste("corr=",round(cor(ts_mat[2,],ts_mat[3,]),2)))
+plot(ts_mat[6,],ts_mat[7,],xlab="Z_6",ylab="Z_7",col="red",pch=20,
+     main=paste("corr=",round(cor(ts_mat[6,],ts_mat[7,]),2)))
+plot(ts_mat[9,],ts_mat[16,],xlab="Z_9",ylab="Z_16",col="green",pch=20,
+     main=paste("corr=",round(cor(ts_mat[9,],ts_mat[16,]),2)))
+plot(ts_mat[11,],ts_mat[18,],xlab="Z_11",ylab="Z_18",col="green",pch=20,
+     main=paste("corr=",round(cor(ts_mat[11,],ts_mat[18,]),2)))
+```
+
+
 # Stationarity
 
 - **Definition:**  A time series model (stochastic process) is said to be **strictly stationary** if the probability distribution of $Z_{t_1},...,Z_{t_m}$ is the same as the probability distribution of $Z_{t_1+k},...,Z_{t_m+k}$ for all subset $\{t_1,...,t_m\} \subset \{1,...n\}$ and for all $k=1,2,...$.  
@@ -243,7 +262,9 @@ In other words, you have constant mean.
 \text{Var}[Z_t]=\int_{-\infty}^{+\infty} (z - \mathbb{E}Z_t)^2 f_{Z_t}(z)dz=\int_{-\infty}^{+\infty} (z - \mathbb{E}Z_{t+k})^2 f_{Z_{t+k}}(z)dz=\text{Var}[Z_{t+k}]
 \end{align*}
 
-(3) Covariance matrix of $Z_1,...,Z_n$ is the same as the covariance of $Z_{1+k},...,Z_{n+k}$ for all subsets of $\{1,...,n\}$ and all $k=1,2,3$.
+(3) Covariance matrix of $Z_1,...,Z_n$ is the same as the covariance of $Z_{1+k},...,Z_{n+k}$ for all subsets of $\{1,...,n\}$ and all $k=1,2,...$.
+
+Example: The following case show $Z_1,Z_2,Z_3$, and $k=6$.
 
 \begin{align*}
 \text{Cov}(Z_1,Z_2,Z_3)&=\left[\begin{array}
