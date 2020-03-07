@@ -95,7 +95,7 @@ htmltools::div(p, align="center")
 3. Example 3: A small .1 second (1000 points) sample of recorded speech for the phrase "aaa...hhh".
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-Speech <- data.frame(Time=as.yearmon(time(speech)), speech=speech)
+Speech <- data.frame(Time=time(speech), speech=speech)
 
 p <- Speech %>%
   ggplot(aes(x=Time, y=speech)) +
@@ -135,7 +135,7 @@ nCov <- ggplot(draw200, aes(time, as.numeric(cum_confirm), group=country, color=
   geom_point() + geom_line() +
   geom_text_repel(aes(label=country), data=draw200[draw200$time == time(x_en), ], hjust=1) +
   theme_minimal(base_size = 14) + theme(legend.position='none') +
-  xlab(NULL) + ylab(NULL) + 
+  xlab("Date") + ylab("Cumulative confirmed cases") + 
   theme_ipsum()
 
 nCov_org <- ggplotly(nCov)
@@ -251,18 +251,18 @@ This definition means that stochastic behavior of the time series model is **inv
 
 - **Implications of strictly stationary:**
 
-(1) $\mathbb{E}Z_t$ is the same for $t=1,2,...,n$ because 
+(1) **$\mathbb{E}Z_t$ is the same for $t=1,2,...,n$** because 
 \begin{align*}
 \mathbb{E}Z_t=\int_{-\infty}^{+\infty} z f_{Z_t}(z)dz=\int_{-\infty}^{+\infty} z f_{Z_{t+k}}(z)dz=\mathbb{E}Z_{t+k}
 \end{align*}
 In other words, you have constant mean.
 
-(2) $\text{Var}[Z_t]$ is the same for $t=1,2,...,n$ because
+(2) **$\text{Var}[Z_t]$ is the same for $t=1,2,...,n$** because
 \begin{align*}
 \text{Var}[Z_t]=\int_{-\infty}^{+\infty} (z - \mathbb{E}Z_t)^2 f_{Z_t}(z)dz=\int_{-\infty}^{+\infty} (z - \mathbb{E}Z_{t+k})^2 f_{Z_{t+k}}(z)dz=\text{Var}[Z_{t+k}]
 \end{align*}
 
-(3) Covariance matrix of $Z_1,...,Z_n$ is the same as the covariance of $Z_{1+k},...,Z_{n+k}$ for all subsets of $\{1,...,n\}$ and all $k=1,2,...$.
+(3) **Covariance matrix of $Z_1,...,Z_n$ is the same as the covariance of $Z_{1+k},...,Z_{n+k}$ for all subsets of $\{1,...,n\}$ and all $k=1,2,...$**.
 
 Example: The following case show $Z_1,Z_2,Z_3$, and $k=6$.
 
@@ -284,10 +284,16 @@ Example: The following case show $Z_1,Z_2,Z_3$, and $k=6$.
 where $\text{Cov}(Z_1,Z_2) =\text{Cov}(Z_7,Z_8)$ is because
 \begin{align*}
 \text{Cov}(Z_1,Z_2) &=\int_{-\infty}^{+\infty} \int_{-\infty}^{+\infty} (x - \mathbb{E}Z_1)(y - \mathbb{E}Z_2) f_{Z_1,Z_2}(x,y)dxdy \\ &=\int_{-\infty}^{+\infty} \int_{-\infty}^{+\infty} (x - \mathbb{E}Z_7)(y - \mathbb{E}Z_8) f_{Z_7,Z_8}(x,y)dxdy \\ &=\text{Cov}(Z_7,Z_8)
-\end{align*}
+\end{align*}.
 
 
 - **Definition**  A time series model (stochastic process) is said to be **weakly stationary** if it satisfies 1, 2, and 3 mentioned above (i.e., implications).
+
+    1. **$\mathbb{E}Z_t$ is the same for $t=1,2,...,n$ (constant mean).**
+
+    2. **$\text{Var}[Z_t]$ is the same for $t=1,2,...,n$ (constant variance).**
+
+    3. **Covariance matrix of $Z_1,...,Z_n$ is the same as the covariance of $Z_{1+k},...,Z_{n+k}$ for all subsets of $\{1,...,n\}$ and all $k=1,2,...$ (constant covariance matrix over time).**
 
     - strictly stationary $\Rightarrow$ weakly stationary
 
