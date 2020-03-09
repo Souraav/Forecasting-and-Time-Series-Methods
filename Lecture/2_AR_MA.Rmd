@@ -148,6 +148,50 @@ where $c=\mu(1-\phi_1)$.
 2. Properties of the errors $a_t$ are independent of $\tilde{Z}_t$.
 3. The series $\tilde{Z}_1$, $\tilde{Z}_2$, ... is (weakly) stationary. A requirement for a stationary AR(1) is that $|\phi|<1$. We’ll see why below.
 
+> Exercise:
+>
+> 1. Simulat an AR(1) process with $\phi=0.8$, $t=1,\dots,5000$ ($Z_t = c + \phi Z_{t-1}  + a_t$). Plot the time series;
+> 2. Write your own function to simulate this AR(1) process;
+> 3. Check the mean, variance, and the correlation between observations 1 time periods apart.
+ 
+```{r, echo=FALSE, eval=FALSE}
+n <- 5000
+# c=0
+AR1 <- arima.sim(n = n, list(ar = 0.8), sd = 1)
+plot.ts(AR1)
+mean(AR1); var(AR1)
+
+test1 <- cbind(AR1, lag(AR1, k = 1))
+cor(test1, use = "pairwise.complete.obs")
+
+# c=1
+e <- rnorm(n,0,1) 
+AR1_2 <- arima.sim(n=n, model=list(ar=0.8,order=c(1,0,0)), 
+                   innov=1+e)
+plot.ts(AR1_2)
+mean(AR1_2); var(AR1_2)
+test2 <- cbind(AR1_2, lag(AR1_2, k = 1), lag(AR1_2, k = 2))
+cor(test2, use = "pairwise.complete.obs")
+
+
+# New Function
+AR_sim <- function(n, phi, c=0) {
+  # phi = 0.8; c = 5
+  a <- rnorm(n, mean = 0, sd = 1)
+  AR1 <- c(a[1], rep(NA, n-1))
+  for (i in 2:n) {
+    AR1[i] <- c + AR1[i-1] * phi + a[i]
+  }
+  return(AR1)
+}
+AR_new <- as.ts(AR_sim(n=n, phi=0.8, c=1))
+plot.ts(AR_new)
+mean(AR_new); var(AR_new)
+test3 <- cbind(AR_new, lag(AR_new, k = 1), lag(AR_new, k = 2))
+cor(test3, use = "pairwise.complete.obs")
+```
+
+
 **Properties of the AR(1):**
 
 Formulas for the mean, variance, and ACF for a time series process with an AR(1) model follow.
@@ -208,7 +252,7 @@ ts4=as.ts(cumsum(rnorm(n)))
 ts.plot(ts4,ts3,ts2,ts1,col=c("black","red","blue","green"))
 ```
 
-When $\phi_1=1$, the time series explodes.  In fact, we repeatedly generate from AR(1) with $\phi_1=1$, and the results are more obvious.
+When $\phi_1=1$, the time series explodes. In fact, we repeatedly generate from AR(1) with $\phi_1=1$, and the results are more obvious.
 ```{r}
 set.seed(1234)
 MC=50
