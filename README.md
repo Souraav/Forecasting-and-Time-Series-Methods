@@ -20,11 +20,11 @@ Dr. Martin Levy, Professor of Business Analytics at University of Cincinnati
 
 [AR, MA](Lecture/2_AR_MA.html)
 
-<!--- ## ARMA & ARIMA
+## ARMA & ARIMA
 
 [ARMA, ARIMA](Lecture/3_ARMA_ARIMA.html)
 
-## Model fitting
+<!--- ## Model fitting
 
 [Model fitting](Lecture/4_Model_fitting.html)
 

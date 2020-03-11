@@ -54,11 +54,29 @@ lapply(list_packages, require, character.only = TRUE)
 
 There is a class of parametric time series models, autoregressive integrated moving average (ARIMA) models, which provides a rational basis for the generating mechanism of time series data.  To work with ARIMA for prediction, we will follow the 3-stage iterative procedure as follows.
 
-(1) identification: selection of tentative ARIMA model using sample ACF $\hat{\rho}_k$.
-(2) estimation of model parameters
-(3) diagnostic checking: does the model fit the data?  If yes, go ahead with forecast;  if no, go back to (1).
+(1) **identification**: selection of tentative ARIMA model using sample ACF $\hat{\rho}_k$.
+
+> Example: Business Inventories We analyzed the quarterly change in bupiness inventories, stated at annual rates in billions of dollars. We examine 60 observations covering the period from the first quarter of 1955 through the fourth quarter of 1969. The data is seasonally adjusted.
+> 
+> Q: Think about what could be the model? AR(1), AR(2), ARMA(1,1), ARMA(3,4)?
+
+```{r, fig.width=12}
+case1=as.ts(scan("case1.txt"))
+case1
+par(mfrow=c(1,3))
+plot(case1); acf(case1); pacf(case1)
+```
+
+
+(2) **estimation** of model parameters
+(3) **diagnostic checking**: does the model fit the data?  If yes, go ahead with forecast;  if no, go back to (1).
 
 In this course, we will follow this procedure as much as we can.
+
+> Other thinkings:
+> 
+> "Machine learning has become alchemy.” | Ali Rahimi, Google. https://www.youtube.com/watch?v=x7psGHgatGM
+> "Without deep understanding of the basic tools needed to build and train new algorithms, he says, researchers creating AIs resort to hearsay, like medieval alchemists." [Cite](https://www.sciencemag.org/news/2018/05/ai-researchers-allege-machine-learning-alchemy)
 
 **ARIMA Models**
 
@@ -298,17 +316,6 @@ It is easy to see that if $\phi_1=1$, the variance explodes.
 
 **Estimation of Autocovariance of AR(1):**
 
-In practice, we never know the true autocovariance, therefore, we need to estimate it by 
-$$
-\hat{\gamma}_0 = \frac{1}{n} \sum_{t=1}^{n} (z_t-\bar{z})^2 
-$$
-$$
-\hat{\gamma}_1 = \frac{1}{n-1} \sum_{t=2}^{n} (z_t-\bar{z})(z_{t-1}-\bar{z})
-$$
-$$
-\hat{\gamma}_k = \frac{1}{n-k} \sum_{t=1+k}^{n} (z_t-\bar{z})(z_{t-k}-\bar{z})
-$$
-where $\bar{z}=1/n \sum_{t=1}^{n} z_t$ is the sample mean.
 
 **ACF of AR(1):** 
 By the definition of ACF, we have ACF of AR(1) as
@@ -319,10 +326,23 @@ By the definition of ACF, we have ACF of AR(1) as
 \end{cases}
 \end{align*}
 
-In practice, we don't know the true ACF $\rho_k$, so we have to estimate the ACF by sample ACF, $\hat{\rho}_k$.
+In practice, we never know the true autocovariance, and the true ACF $\rho_k$, so we have to estimate the ACF by sample ACF, $\hat{\rho}_k$.
+
 $$
 \hat{\rho}_k=\frac{\hat{\gamma}_k}{\hat{\gamma}_0}
 $$
+
+We need to estimate it by 
+$$
+\hat{\gamma}_0 = \frac{1}{n} \sum_{t=1}^{n} (z_t-\bar{z})^2 
+$$
+$$
+\hat{\gamma}_1 = \frac{1}{n-1} \sum_{t=2}^{n} (z_t-\bar{z})(z_{t-1}-\bar{z})
+$$
+$$
+\hat{\gamma}_k = \frac{1}{n-k} \sum_{t=1+k}^{n} (z_t-\bar{z})(z_{t-k}-\bar{z})
+$$
+where $\bar{z}=1/n \sum_{t=1}^{n} z_t$ is the sample mean.
 
 Here are some examples of AR(1) with their ACFs.  We set $\phi_1=0.5,-0.5$
 ```{r, fig.width=9,fig.height=6}
@@ -456,14 +476,14 @@ For $k>2$, we have
 
 Set $k=0$, we have
 \begin{align*}
-\mathbb{E}[\tilde{Z}_t \tilde{Z}_{t-k}] &= \mathbb{E}[\phi_1 \tilde{Z}_{t-1} \tilde{Z}_{t-k} + \phi_2 \tilde{Z}_{t-2} \tilde{Z}_{t-k} + \tilde{Z}_{t-k} a_t]\\
+\mathbb{E}[\tilde{Z}_t \tilde{Z}_{t}] &= \mathbb{E}[\phi_1 \tilde{Z}_{t-1} \tilde{Z}_{t} + \phi_2 \tilde{Z}_{t-2} \tilde{Z}_{t} + \tilde{Z}_{t} a_t]\\
 \gamma_0 &= \phi_1 \gamma_1 + \phi_2 \gamma_2  + \sigma^2_a\\
 \gamma_0 &= \phi_1 \rho_1 \gamma_0 + \phi_2 \rho_2 \gamma_0   + \sigma^2_a\\
 \end{align*}
 
 we can obtain the variance of AR(2) as
 \begin{align*}
-\text{Var}(Z_t)=\frac{\sigma^2_a}{1-\rho_1 \phi_1 - \rho_2 \phi_2}
+\text{Var}(Z_t)=\gamma_0=\frac{\sigma^2_a}{1-\rho_1 \phi_1 - \rho_2 \phi_2}
 \end{align*}
 
 **ACF of AR(2)**
