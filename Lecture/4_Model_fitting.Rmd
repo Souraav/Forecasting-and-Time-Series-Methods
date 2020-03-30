@@ -33,6 +33,11 @@ h3 { /* Header 3 */
 }
 </style>
 
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(eval = TRUE, warning=FALSE, message = FALSE)
+htmltools::includeHTML("AdSense.html")
+```
+
 We require the following R packages.
 
 ```{r, warning=FALSE,message=FALSE, results = 'hide'}
@@ -327,6 +332,7 @@ fit
 ```
 
 # Diagnostic Check
+
 Determine model adequacy and suggest alternative models
 
 General idea: have a fitted model.  Is the model adequate?  If not, how do we modify it?
@@ -426,8 +432,6 @@ Remarks:
 - test of zero mean: $\sum \hat{a}_{t}/n$
 
 - test of zero correlation: ACF of $\hat{a}_{t}$
-
-
 
 ## Residual Analysis to Detect Lack of Fit
 

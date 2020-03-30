@@ -24,11 +24,11 @@ Dr. Martin Levy, Professor of Business Analytics at University of Cincinnati
 
 [ARMA, ARIMA](Lecture/3_ARMA_ARIMA.html)
 
-<!--- ## Model fitting
+## Model fitting
 
 [Model fitting](Lecture/4_Model_fitting.html)
 
-## Augmented Dickey-Fuller test (ADF) 
+<!--- ## Augmented Dickey-Fuller test (ADF) 
 
 [ADF](Lecture/5_ADF.html)
 
