@@ -105,7 +105,7 @@ pacf(ts1,ylim=c(-1,1),lag.max=10)
 
 # Cases
 
-**Case 1: Business Inventories** We analyzed the quarterly change in bupiness inventories, stated at annual rates in billions of dollars.  We examine 60 observations covering the period from the first quarter of 1955 through the fourth quarter of 1969.  The data is seasonally adjusted.
+**Case 1: Business Inventories** [data](case1.txt) fWe analyzed the quarterly change in bupiness inventories, stated at annual rates in billions of dollars.  We examine 60 observations covering the period from the first quarter of 1955 through the fourth quarter of 1969.  The data is seasonally adjusted.
 
 ```{r, fig.width=9,fig.height=3}
 case1=as.ts(scan("case1.txt"))
@@ -126,7 +126,7 @@ fitauto
 plot(forecast(fitauto,h=30))
 ```
 
-**Case 2: Saving Rate** The saving rate is personal saving as a percent of disposable personal income.  Some economists believe shifts in this rate contribute to business fluctuations.  For example, when people save more of their income they spend less for goods and services.  This reduction in total demand for output may cause national production to fall and unemployment to rise.
+**Case 2: Saving Rate** [data](case2.txt)The saving rate is personal saving as a percent of disposable personal income.  Some economists believe shifts in this rate contribute to business fluctuations.  For example, when people save more of their income they spend less for goods and services.  This reduction in total demand for output may cause national production to fall and unemployment to rise.
 
 We analyze 100 quarterly observations of the US saving rate for the years 1955-1979.  The data is seasonally adjusted.
 ```{r, fig.width=9,fig.height=3}
@@ -138,7 +138,7 @@ acf(case2)
 pacf(case2)
 ```
 
-**Case 3: Coal Production**  The data in this case is monthly bituminous coal production in the US from January 1952 through December 1959, a total of 96 observations.  The data is seasonally adjusted.
+**Case 3: Coal Production**  [data](case3.txt) The data in this case is monthly bituminous coal production in the US from January 1952 through December 1959, a total of 96 observations.  The data is seasonally adjusted.
 ```{r, fig.width=9,fig.height=3}
 case3=as.ts(scan("case3.txt"))
 case3
@@ -148,7 +148,7 @@ acf(case3)
 pacf(case3)
 ```
 
-**Case 4: Housing Permits**  We develop a model to forecast the index of new private housing units authorized by local building permits.  These are quarterly seasonally adjusted data covering the years 1947-1967.
+**Case 4: Housing Permits** [data](case4.txt) We develop a model to forecast the index of new private housing units authorized by local building permits.  These are quarterly seasonally adjusted data covering the years 1947-1967.
 
 ```{r, fig.width=9,fig.height=3}
 case4=as.ts(scan("case4.txt"))
@@ -159,7 +159,7 @@ acf(case4)
 pacf(case4)
 ```
 
-**Case 5: Rail Freight** We model the quarterly freight volume carried by Class I railroads in the US measured in billions of ton-miles.  The data cover the period 1965-1978, a total of 56 observations.  The data is seasonally adjusted.
+**Case 5: Rail Freight** [data](case5.txt) We model the quarterly freight volume carried by Class I railroads in the US measured in billions of ton-miles.  The data cover the period 1965-1978, a total of 56 observations.  The data is seasonally adjusted.
 
 ```{r, fig.width=9,fig.height=3}
 case5=as.ts(scan("case5.txt"))
@@ -170,7 +170,7 @@ acf(case5)
 pacf(case5)
 ```
 
-**Case 6: AT\&T Stock Price** The data is the weekly closing price of American Telephone and Telegraph (AT\&T) common shares for the year 1979.  The observations were taken from various issues of the Wall Street Journal, with only 52 observations.
+**Case 6: AT\&T Stock Price** [data](case6.txt) The data is the weekly closing price of American Telephone and Telegraph (AT\&T) common shares for the year 1979.  The observations were taken from various issues of the Wall Street Journal, with only 52 observations.
 
 ```{r, fig.width=9,fig.height=3}
 case6=as.ts(scan("case6.txt"))
@@ -181,7 +181,7 @@ acf(case6)
 pacf(case6)
 ```
 
-**Case 7: Real-Estate Loan**  We analyze the monthly volume of commercial bank real-estate loans in billions of dollars, from January 1973 to October 1978, a total of 70 observations.  The data is derived from reports to the Federal Reserve System from large commercial banks.
+**Case 7: Real-Estate Loan** [data](case7.txt) We analyze the monthly volume of commercial bank real-estate loans in billions of dollars, from January 1973 to October 1978, a total of 70 observations.  The data is derived from reports to the Federal Reserve System from large commercial banks.
 
 ```{r, fig.width=9,fig.height=3}
 case7=as.ts(scan("case7.txt"))
@@ -192,7 +192,7 @@ acf(case7)
 pacf(case7)
 ```
 
-**Case 9: Air-Carrier Freight**  We study the volume of freight, measured in ton-miles, hauled by air carries in the US.  There are 120 monthly observations covering the years 1969-1978.
+**Case 9: Air-Carrier Freight** [data](case9.txt) We study the volume of freight, measured in ton-miles, hauled by air carries in the US.  There are 120 monthly observations covering the years 1969-1978.
 
 ```{r, fig.width=9,fig.height=3}
 case9=as.ts(scan("case9.txt"))
@@ -203,7 +203,7 @@ acf(case9)
 pacf(case9)
 ```
 
-**Case 10: Profit Margin**  The data is the after-tax profits, measured in cents per dollar of sales, for all US manufacturing corporations.  The data covers the period 1953-1972, a total of 80 observations.
+**Case 10: Profit Margin** [data](case10.txt) The data is the after-tax profits, measured in cents per dollar of sales, for all US manufacturing corporations.  The data covers the period 1953-1972, a total of 80 observations.
 
 ```{r, fig.width=9,fig.height=3}
 case10=as.ts(scan("case10.txt"))
@@ -214,7 +214,7 @@ acf(case10)
 pacf(case10)
 ```
 
-**Case 13: Cigar Consumption** The data represents monthly cigar consumption (withdrawals from stock) for the years 1969-1976.  
+**Case 13: Cigar Consumption** [data](case13.txt) The data represents monthly cigar consumption (withdrawals from stock) for the years 1969-1976.  
 
 ```{r, fig.width=9,fig.height=3}
 case13=as.ts(scan("case13.txt"))
@@ -225,7 +225,7 @@ acf(case13)
 pacf(case13)
 ```
 
-**Case IMA: Refrigerator**
+**Case IMA: Refrigerator** [daca](case_refrigerator.txt) 
 ```{r, fig.width=9,fig.height=3}
 d=scan("case_refrigerator.txt")
 case_ref=as.ts(d[seq(2,length(d),2)])
