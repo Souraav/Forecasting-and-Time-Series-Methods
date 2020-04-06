@@ -28,7 +28,7 @@ Dr. Martin Levy, Professor of Business Analytics at University of Cincinnati
 
 [Model fitting](Lecture/4_Model_fitting.html)
 
-<!--- ## Augmented Dickey-Fuller test (ADF) 
+## Augmented Dickey-Fuller test (ADF) 
 
 [ADF](Lecture/5_ADF.html)
 
@@ -44,7 +44,7 @@ Dr. Martin Levy, Professor of Business Analytics at University of Cincinnati
 
 [VAR](Lecture/8_VAR.html)
 
-## Cointegration
+<!--- ## Cointegration
 
 [Cointegration](Lecture/9_Cointegration.html)
 

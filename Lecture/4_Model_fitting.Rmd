@@ -427,7 +427,7 @@ Remarks:
 
 - If the model is correct, $\hat{a}_{t}$ and $\hat{a}_{t+k}$ should be uncorrelated for all $k\neq 0$ , and should be normal with mean 0, and variance estimated by $\hat{\sigma}^2_a=\sum \hat{a}_{t}^2 / (n-r)$ where $r$ is the total number of parameter estimated in the model.
 
-- test of normality of residual: QQ-plot
+- test of normality of residual: QQ-plot, Anderson-Darling Test, Shapiro-Wilk Test, Ryan-Joiner Test, Kolmogorov-Smirnov Test [Details](https://online.stat.psu.edu/stat501/lesson/7/7.5)
 
 - test of zero mean: $\sum \hat{a}_{t}/n$
 
@@ -499,12 +499,8 @@ R.L. Anderson shows that the sampling distribution of $\hat{\rho}_k$ is approxim
 
 **Example**
 
-
-
-
-
-
 Case 1: business inventories
+
 ```{r, fig.width=9,fig.height=6}
 case1=as.ts(scan("case1.txt"))
 case1
@@ -520,11 +516,15 @@ acf(fit$residuals,ylim=c(-1,1))
 pacf(fit$residuals,ylim=c(-1,1))
 ```
 
+```{r}
+checkresiduals(fit)
+```
+
 ### A Portmanteau Lack of Fit Test
 
 Alternative and adjunct to testing on $\hat{\rho}_k(\hat{a}_t)$ individually, diagnose of first a few $\hat{\rho}_k(\hat{a}_t)$ "taken as a whole" to indicate model inadequacy.
 
-Results: Suppose we have the first $L$ residual autocorrelation, if the fitted model is correct then
+Results: Suppose we have the first $L$ residual autocorrelation (or $L$ is the maximum lag being considered), if the fitted model is correct then the **Box-Pierce test** statistics has the following form: 
 
 \begin{align*}
 Q=n\sum_{k=1}^{L} \hat{\rho}_k^2(\hat{a}_t)  \sim \chi^2(L-r)
@@ -532,18 +532,23 @@ Q=n\sum_{k=1}^{L} \hat{\rho}_k^2(\hat{a}_t)  \sim \chi^2(L-r)
 
 where $r$ is the number of parameters estimated in the model, i.e., $p/q/p+q$,  and n is the sample size, i.e., number of observations.  This is called Portmanteau test, or Box–Pierce test or Box-Ljung test.
 
+If the model is inadequate, $Q$ tends to get large.  If the model is adequate, then $\hat{a}_t$ is white noise, $Q$ tends to be small.
+
+Reject $H_0$ if $Q > \chi^2_{1-\alpha,L-r}$, which means the model is inadequate.
+
+A more accurate test is the **Box-Ljung test**, based on 
+
+\begin{align*}
+Q^*=n(n+2)\sum_{k=1}^{L} (n-k)^{-1} \hat{\rho}_k^2(\hat{a}_t)  \sim \chi^2(L-r)
+\end{align*}
+
 ```{r, fig.width=9,fig.height=6}
 Box.test(resid(fit), lag = 10, type = "Ljung-Box", fitdf = 1)
 acf=acf(resid(fit))
 length(case1)*(length(case1)+2)*sum(acf$acf[2:11]^2/(length(case1)-1:10))
 ```
 
-
-If the model is inadequate, $Q$ tends to get large.  If the model is adequate, then $\hat{a}_t$ is white noise, $Q$ tends to be small.
-
-Reject $H_0$ if $Q > \chi^2_{L-r}$, which means the model is inadequate.
-
-
+- A close look at the empirical distribution of $Q$:
 ```{r}
 n = 100
 MC=10000
@@ -558,7 +563,7 @@ hist(Q_vec,xlab="Q",breaks=30,main="Q's distribution")
 abline(v=qchisq(0.95,df=10-0))
 ```
 
-A closer look at $Q$:
+- A close look at the statistical derivation of $Q$:
 
 $$
 Q=n \sum_{k=1}^{L} \hat{\rho}_k^2(\hat{a}_t)=\sum_{k=1}^{L} [\sqrt{n}\hat{\rho}_k(\hat{a}_t)]^2
@@ -585,9 +590,7 @@ The residual ACF $\hat{\rho}_k^2(\hat{a}_t)$ is useful for detecting lack of fit
 
 If the residuals do not behave like a white noise, then we need to re-specify the model.  For this part, the residuals ACF $\hat{\rho}_k(\hat{a}_t)$ can also propose alternative models, i.e., model identification.
 
-Example: model misspecification
-
-Suppose a model a fit as MA(1)
+Suppose a model is fitted as MA(1)
 
 \begin{align*}
 \tilde{Z}_{t} = a_t - \theta_1 a_{t-1}
@@ -621,7 +624,8 @@ So we write
 
 \begin{align*}
 \tilde{Z}_t = a_t - \theta_1 a_{t-1}  &\text{ and }  \tilde{Z}_{t-1} = a_{t-1} - \theta_1 a_{t-2}\\
-\tilde{Z}_t - \phi_1 \tilde{Z}_{t-1} &= ( a_t - \phi_1 a_{t-1} )- \theta_1 ( a_{t-1} - \phi_1 a_{t-2} )\\
+\tilde{Z}_t - \phi_1 \tilde{Z}_{t-1} &= ( a_t - \theta_1 a_{t-1} )- \phi_1 ( a_{t-1} - \theta_1 a_{t-2} )\\
+                                     &= ( a_t - \phi_1 a_{t-1} )- \theta_1 ( a_{t-1} - \phi_1 a_{t-2} )\\
 &= e_t -\theta_1 e_{t-1}
 \end{align*}
 
