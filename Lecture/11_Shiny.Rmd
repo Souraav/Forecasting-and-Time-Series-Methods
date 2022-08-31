@@ -1,0 +1,55 @@
+---
+title: "Apply Shiny app for Forecasting and Time Series Methods Notes 11"
+author: "[Xiaorui Zhu](https://homepages.uc.edu/~zhuxr/) (zhuxr@mail.uc.edu)"
+output: 
+  html_document:
+    code_folding: show
+    fig_caption: yes
+    highlight: tango
+    number_sections: yes
+    theme: readable
+    toc: yes
+editor_options: 
+  chunk_output_type: console
+---
+<style type="text/css">
+body{ /* Normal  */
+      font-size: 20px;
+  }
+code.r{ /* Code block */
+    font-size: 16px;
+}
+pre { /* Code block - determines code spacing between lines */
+    font-size: 16px;
+}
+h1 { /* Header 1 */
+  color: DarkBlue;
+}
+h2 { /* Header 2 */
+  color: DarkBlue;
+}
+h3 { /* Header 3 */
+  color: DarkBlue;
+}
+</style>
+
+
+
+```{r, warning=FALSE,message=FALSE, results = 'hide'}
+# Install necessary packages
+list_packages <- c("AER", "dynlm", "tidyverse", "fpp", "fpp2", 
+                   "forecast", "readxl", "stargazer", "scales",
+                   "quantmod", "urca", "vars", "tseries", "sarima")
+new_packages <- list_packages[!(list_packages %in% installed.packages()[,"Package"])]
+if(length(new_packages)) install.packages(new_packages)
+
+# Load necessary packages
+lapply(list_packages, require, character.only = TRUE)
+```
+
+
+# Intro of Shiny App 
+
+[Template]()
+
+
